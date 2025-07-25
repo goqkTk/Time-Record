@@ -1,0 +1,35 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f7f7f7;
+}
+.container {
+  max-width: 400px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 32px 16px;
+  text-align: center;
+}
+.timer {
+  font-size: 3em;
+  margin: 32px 0;
+  letter-spacing: 2px;
+}
+button {
+  font-size: 1.2em;
+  padding: 12px 32px;
+  margin: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: #4caf50;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+} 
