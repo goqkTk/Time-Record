@@ -7,12 +7,95 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>봉사시간 기록</h1>
-    <div class="timer" id="timer">00:00:00</div>
-    <button id="startBtn">시작</button>
-    <button id="stopBtn" disabled>정지</button>
+  <div class="app">
+    <!-- 메인 컨텐츠 영역 -->
+    <div class="main-content">
+      <!-- 달력 화면 -->
+      <div id="calendar-view" class="view">
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <button id="prevMonth" class="nav-arrow">‹</button>
+            <h2 id="currentMonth"></h2>
+            <button id="nextMonth" class="nav-arrow">›</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+      </div>
+
+      <!-- 시간 화면 -->
+      <div id="time-view" class="view active">
+        <div class="daily-view">
+          <!-- 타이머 섹션 -->
+          <div class="timer-section">
+            <div class="timer-card">
+              <div class="timer-display">
+                <div class="current-timer" id="timer">00:00:00</div>
+                <div class="total-timer" id="totalTimer">총 00:00:00</div>
+              </div>
+              <div class="timer-controls">
+                <button id="startBtn" class="timer-btn start-btn">▶</button>
+                <button id="pauseBtn" class="timer-btn pause-btn" style="display: none;">⏸</button>
+                <button id="stopBtn" class="timer-btn stop-btn" style="display: none;">⏹</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 일간뷰 섹션 -->
+          <div class="daily-timeline-section">
+            <div class="daily-header">
+              <h2 id="dailyDate">오늘</h2>
+              <div class="daily-total" id="dailyTotal">0:00</div>
+            </div>
+            <div class="hourly-timeline" id="hourlyTimeline">
+              <!-- 24시간 타임라인이 여기에 생성됩니다 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 통계 화면 -->
+      <div id="stats-view" class="view">
+        <div class="header">
+          <h1>통계</h1>
+        </div>
+        <div class="stats-container">
+          <div class="stat-card">
+            <h3>선택한 날짜</h3>
+            <div class="stat-value" id="selectedDateTime">0시간 0분</div>
+            <div class="stat-date" id="selectedDate">날짜를 선택하세요</div>
+          </div>
+          <div class="stat-card">
+            <h3>선택한 달</h3>
+            <div class="stat-value" id="selectedMonthTime">0시간 0분</div>
+          </div>
+          <div class="stat-card">
+            <h3>오늘</h3>
+            <div class="stat-value" id="todayTime">0시간 0분</div>
+          </div>
+          <div class="stat-card">
+            <h3>전체</h3>
+            <div class="stat-value" id="totalTime">0시간 0분</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 메뉴바 -->
+    <div class="bottom-nav">
+      <button class="nav-item" data-view="calendar-view">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">달력</span>
+      </button>
+      <button class="nav-item active" data-view="time-view">
+        <span class="nav-icon">⏰</span>
+        <span class="nav-label">시간</span>
+      </button>
+      <button class="nav-item" data-view="stats-view">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">통계</span>
+      </button>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>
-</html> 
+</html>

@@ -35,6 +35,14 @@ app.post('/api/record', (req, res) => {
   );
 });
 
+// 기록 조회 API
+app.get('/api/records', (req, res) => {
+  db.all('SELECT * FROM records ORDER BY created_at DESC', (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB 오류' });
+    res.json(rows);
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-}); 
+});

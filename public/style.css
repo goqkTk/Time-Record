@@ -1,35 +1,426 @@
-body {
+* {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f7f7f7;
+  box-sizing: border-box;
 }
-.container {
-  max-width: 400px;
-  margin: 40px auto;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 32px 16px;
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f5f5;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px;
+}
+
+.view {
+  display: none;
+  height: 100%;
+}
+
+.view.active {
+  display: block;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 달력 스타일 */
+.calendar-container {
+  width: 100%;
+  height: calc(100vh - 80px);
+  background: white;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px;
+  margin-bottom: 10px;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 10px;
+  transition: color 0.2s;
+}
+
+.nav-arrow:hover {
+  color: #4CAF50;
+}
+
+.calendar-header h2 {
+  color: #333;
+  font-size: 18px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  flex: 1;
+  grid-template-rows: repeat(7, 1fr);
+  margin: 0 10px 10px 10px;
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 16px;
+  padding: 8px 4px;
+  min-height: 60px;
+}
+
+.calendar-day .day-number {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.calendar-day .day-time {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.calendar-day:hover {
+  background-color: #f0f0f0;
+}
+
+.calendar-day.today {
+  background-color: #4CAF50;
+  color: white;
+  font-weight: bold;
+}
+
+.calendar-day.selected {
+  background: #2196F3;
+  color: white;
+  font-weight: bold;
+}
+
+.calendar-day.today.selected {
+  background: #FF9800;
+  color: white;
+  font-weight: bold;
+}
+
+.calendar-day.other-month {
+  color: #ccc;
+}
+
+.calendar-day.has-record {
+  background-color: #E8F5E8;
+  color: #2E7D32;
+  font-weight: bold;
+}
+
+.day-header {
+  font-weight: bold;
+  color: #666;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* 시간 화면 - 일간뷰 */
+.daily-view {
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.timer-section {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.timer-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   text-align: center;
 }
-.timer {
-  font-size: 3em;
-  margin: 32px 0;
+
+.daily-timeline-section {
+  flex: 1;
+  padding: 20px;
+  background: #f8f9fa;
+  overflow-y: auto;
+}
+
+.daily-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.daily-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.daily-total {
+  font-size: 18px;
+  font-weight: 600;
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+
+.hourly-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hour-block {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-left: 4px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.hour-block.has-activity {
+  border-left-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.hour-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.hour-activity {
+  flex: 1;
+  margin-left: 15px;
+}
+
+.activity-bar {
+  height: 6px;
+  background: #4CAF50;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+.activity-duration {
+  font-size: 12px;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+/* 시간 화면 스타일 */
+.time-container {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.timer-display {
+  margin-bottom: 20px;
+}
+
+.current-timer {
+  font-size: 56px;
+  font-weight: 300;
+  margin-bottom: 8px;
   letter-spacing: 2px;
 }
-button {
-  font-size: 1.2em;
-  padding: 12px 32px;
-  margin: 0 8px;
-  border: none;
-  border-radius: 8px;
-  background: #4caf50;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
+
+.total-timer {
+  font-size: 16px;
+  opacity: 0.8;
+  font-weight: 300;
 }
-button:disabled {
+
+.timer-controls {
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.timer-btn {
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.start-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.start-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.pause-btn {
+  background: #FF9800;
+  color: white;
+}
+
+.pause-btn:hover {
+  background: #f57c00;
+  transform: scale(1.05);
+}
+
+.stop-btn {
+  background: #f44336;
+  color: white;
+}
+
+.stop-btn:hover {
+  background: #da190b;
+  transform: scale(1.05);
+}
+
+.timer-btn:disabled {
   background: #bbb;
   cursor: not-allowed;
-} 
+  transform: none;
+}
+
+
+
+/* 통계 화면 스타일 */
+.stats-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.stat-card h3 {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #4CAF50;
+}
+
+.stat-date {
+  font-size: 14px;
+  color: #999;
+  margin-top: 5px;
+}
+
+/* 하단 메뉴바 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #eee;
+  display: flex;
+  height: 80px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 10px;
+}
+
+.nav-item:hover {
+  background-color: #f5f5f5;
+}
+
+.nav-item.active {
+  background-color: #E8F5E8;
+}
+
+.nav-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.nav-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.nav-item.active .nav-label {
+  color: #4CAF50;
+  font-weight: bold;
+}
