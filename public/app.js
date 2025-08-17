@@ -7,6 +7,8 @@ let isPaused = false;
 let currentDate = new Date();
 let selectedDate = null;
 let records = [];
+let pausedIntervals = []; // 일시정지된 시간 구간들
+let sessionStartTime = null; // 세션 시작 시간
 
 // DOM 요소들
 const timerEl = document.getElementById('timer');
@@ -80,6 +82,16 @@ function updateTotalTimer() {
 
 startBtn.onclick = () => {
   startTime = Date.now();
+  if (sessionStartTime === null) {
+    sessionStartTime = startTime;
+    pausedIntervals = [];
+  } else if (isPaused && pausedIntervals.length > 0) {
+    // 일시정지에서 재시작할 때 일시정지 구간의 끝 시간 기록
+    const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
+    if (!lastPausedInterval.end) {
+      lastPausedInterval.end = startTime;
+    }
+  }
   timerInterval = setInterval(updateTimer, 1000);
   isPaused = false;
   
@@ -92,6 +104,11 @@ startBtn.onclick = () => {
 pauseBtn.onclick = () => {
   clearInterval(timerInterval);
   totalElapsed += elapsed;
+  
+  // 일시정지 구간 기록
+  const pauseStartTime = Date.now();
+  pausedIntervals.push({ start: pauseStartTime });
+  
   isPaused = true;
   
   // 현재 타이머 리셋하고 총 시간 업데이트
@@ -107,22 +124,41 @@ pauseBtn.onclick = () => {
 stopBtn.onclick = async () => {
   clearInterval(timerInterval);
   
-  // 총 시간 계산
+  // 현재 일시정지 중이면 마지막 일시정지 구간 종료
+  if (isPaused && pausedIntervals.length > 0) {
+    const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
+    if (!lastPausedInterval.end) {
+      lastPausedInterval.end = Date.now();
+    }
+  }
+  
+  // 총 시간 계산 (일시정지 시간 제외)
   const finalDuration = totalElapsed + elapsed;
   
-  if (finalDuration > 0) {
+  if (finalDuration > 0 && sessionStartTime) {
+    // 일시정지된 총 시간 계산
+    let totalPausedTime = 0;
+    pausedIntervals.forEach(interval => {
+      if (interval.start && interval.end) {
+        totalPausedTime += interval.end - interval.start;
+      }
+    });
+    
+    // 실제 작업 시간 (일시정지 시간 제외)
+    const actualWorkDuration = finalDuration;
+    
     // 서버로 기록 전송
     try {
-      const sessionStartTime = new Date(Date.now() - finalDuration);
       const sessionEndTime = new Date();
       
       await fetch('/api/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          startTime: sessionStartTime.toISOString(),
+          startTime: new Date(sessionStartTime).toISOString(),
           endTime: sessionEndTime.toISOString(),
-          duration: finalDuration
+          duration: actualWorkDuration,
+          pausedIntervals: pausedIntervals
         })
       });
       
@@ -141,6 +177,8 @@ stopBtn.onclick = async () => {
   totalElapsed = 0;
   elapsed = 0;
   isPaused = false;
+  sessionStartTime = null;
+  pausedIntervals = [];
   updateTotalTimer();
   
   // 버튼 상태 변경
@@ -224,6 +262,7 @@ function renderCalendar() {
      dayEl.addEventListener('click', () => {
        selectedDate = new Date(currentDay);
        renderCalendar();
+       renderDailyView();
        updateStats();
      });
      
@@ -255,67 +294,236 @@ nextMonthBtn.onclick = () => {
 
 // 일간뷰 렌더링
 function renderDailyView() {
-  const today = new Date();
-  dailyDateEl.textContent = today.toLocaleDateString('ko-KR', { 
+  // 선택된 날짜가 있으면 해당 날짜를, 없으면 오늘 날짜를 사용
+  const displayDate = selectedDate || new Date();
+  dailyDateEl.textContent = displayDate.toLocaleDateString('ko-KR', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric',
     weekday: 'long'
   });
   
-  // 오늘의 총 시간 계산
-  const todayRecords = records.filter(record => {
+  // 선택된 날짜의 총 시간 계산
+  const dayRecords = records.filter(record => {
     const recordDate = new Date(record.start_time);
-    return recordDate.toDateString() === today.toDateString();
+    return recordDate.toDateString() === displayDate.toDateString();
   });
   
-  const todayTotal = todayRecords.reduce((sum, record) => sum + record.duration, 0);
-  dailyTotalEl.textContent = formatDurationShort(todayTotal);
+  const dayTotal = dayRecords.reduce((sum, record) => sum + record.duration, 0);
+  dailyTotalEl.textContent = formatDurationShort(dayTotal);
   
-  // 24시간 타임라인 생성
+  // 분 단위 타임라인 생성 (24시간 * 60분 = 1440분)
   hourlyTimelineEl.innerHTML = '';
   
-  for (let hour = 0; hour < 24; hour++) {
-    const hourBlock = document.createElement('div');
-    hourBlock.className = 'hour-block';
+  // 현재 시간 계산
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  // 30분 간격으로 표시 (48개 블록)
+  for (let minutes = 0; minutes < 1440; minutes += 30) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
     
-    const hourTime = document.createElement('div');
-    hourTime.className = 'hour-time';
-    hourTime.textContent = `${hour.toString().padStart(2, '0')}:00`;
+    const timeBlock = document.createElement('div');
+    timeBlock.className = 'time-block';
     
-    const hourActivity = document.createElement('div');
-    hourActivity.className = 'hour-activity';
-    
-    // 해당 시간대의 활동 찾기
-    const hourRecords = todayRecords.filter(record => {
-      const recordStart = new Date(record.start_time);
-      const recordHour = recordStart.getHours();
-      return recordHour === hour;
-    });
-    
-    if (hourRecords.length > 0) {
-      hourBlock.classList.add('has-activity');
+    // 현재 시간 표시선
+    if (minutes <= currentMinutes && currentMinutes < minutes + 30) {
+      const currentTimeLine = document.createElement('div');
+      currentTimeLine.className = 'current-time-line';
+      const currentTimeOffset = ((currentMinutes - minutes) / 30) * 100;
+      currentTimeLine.style.top = `${currentTimeOffset}%`;
       
-      const totalDuration = hourRecords.reduce((sum, record) => sum + record.duration, 0);
+      // 현재 시간 텍스트 추가
+      const currentTimeText = document.createElement('div');
+      currentTimeText.className = 'current-time-text';
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+       currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+      currentTimeLine.appendChild(currentTimeText);
       
-      const activityBar = document.createElement('div');
-      activityBar.className = 'activity-bar';
-      // 바의 너비를 시간에 비례하여 설정 (최대 1시간 = 100%)
-      const maxWidth = Math.min(100, (totalDuration / (60 * 60 * 1000)) * 100);
-      activityBar.style.width = `${maxWidth}%`;
-      
-      const activityDuration = document.createElement('div');
-      activityDuration.className = 'activity-duration';
-      activityDuration.textContent = formatDurationShort(totalDuration);
-      
-      hourActivity.appendChild(activityBar);
-      hourActivity.appendChild(activityDuration);
+      timeBlock.appendChild(currentTimeLine);
     }
     
-    hourBlock.appendChild(hourTime);
-    hourBlock.appendChild(hourActivity);
-    hourlyTimelineEl.appendChild(hourBlock);
+    const timeLabel = document.createElement('div');
+    timeLabel.className = 'time-label';
+    
+    // AM/PM 형식으로 시간 표시
+    if (minute === 0) {
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const ampm = hour < 12 ? 'AM' : 'PM';
+      timeLabel.textContent = `${displayHour} ${ampm}`;
+    } else {
+      timeLabel.textContent = '';
+    }
+    
+    const activityArea = document.createElement('div');
+    activityArea.className = 'activity-area';
+    
+    // 해당 시간대의 활동 찾기 (저장된 기록)
+    const timeRecords = dayRecords.filter(record => {
+      const recordStart = new Date(record.start_time);
+      const recordEnd = new Date(recordStart.getTime() + record.duration);
+      const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
+      const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+      
+      return recordStartMinutes < minutes + 30 && recordEndMinutes > minutes;
+    });
+    
+    // 현재 진행 중인 세션 확인 (오늘 날짜일 때만)
+    let currentSessionRecord = null;
+    const isDisplayingToday = displayDate.toDateString() === new Date().toDateString();
+    if (isDisplayingToday && sessionStartTime && (totalElapsed > 0 || elapsed > 0)) {
+      const sessionStart = new Date(sessionStartTime);
+      const sessionEnd = new Date();
+      const sessionStartMinutes = sessionStart.getHours() * 60 + sessionStart.getMinutes();
+      const sessionEndMinutes = sessionEnd.getHours() * 60 + sessionEnd.getMinutes();
+      
+      if (sessionStartMinutes < minutes + 30 && sessionEndMinutes > minutes) {
+        currentSessionRecord = {
+          start_time: sessionStart.toISOString(),
+          duration: totalElapsed + elapsed,
+          paused_intervals: pausedIntervals
+        };
+      }
+    }
+    
+    // 모든 활동 기록 (저장된 기록 + 현재 세션)
+    const allRecords = [...timeRecords];
+    if (currentSessionRecord) {
+      allRecords.push(currentSessionRecord);
+    }
+    
+    if (allRecords.length > 0) {
+      allRecords.forEach(record => {
+        const recordStart = new Date(record.start_time);
+        const recordEnd = new Date(recordStart.getTime() + record.duration);
+        const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
+        const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+        
+        // 활동 바 생성 (실제 작업 시간)
+        const activityBar = document.createElement('div');
+        activityBar.className = 'activity-bar-vertical';
+        
+        // 활동 바의 위치와 높이 계산
+        const startOffset = Math.max(0, recordStartMinutes - minutes);
+        const endOffset = Math.min(30, recordEndMinutes - minutes);
+        const height = ((endOffset - startOffset) / 30) * 100;
+        const top = (startOffset / 30) * 100;
+        
+        activityBar.style.height = `${height}%`;
+        activityBar.style.top = `${top}%`;
+        
+        // 활동 제목 표시 (첫 번째 블록에만)
+        if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 30) {
+          const activityTitle = document.createElement('div');
+          activityTitle.className = 'activity-title';
+          
+          // 활동 시간 계산 (밀리초를 분으로 변환)
+          const durationMinutes = Math.round(record.duration / (1000 * 60));
+          let timeText = '';
+          
+          if (durationMinutes >= 60) {
+            const hours = Math.floor(durationMinutes / 60);
+            const mins = durationMinutes % 60;
+            timeText = mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
+          } else if (durationMinutes > 0) {
+            timeText = `${durationMinutes}분`;
+          }
+          
+          if (timeText) {
+            activityTitle.textContent = timeText;
+            activityBar.appendChild(activityTitle);
+          }
+        }
+        
+        activityArea.appendChild(activityBar);
+        
+        // 일시정지된 시간 구간을 활동 바에서 제외하고 별도로 표시
+        if (record.paused_intervals && record.paused_intervals.length > 0) {
+          // 활동 시간을 세그먼트로 나누기
+          const segments = [];
+          let currentStart = recordStartMinutes;
+          
+          record.paused_intervals.forEach(pausedInterval => {
+            if (pausedInterval.start && pausedInterval.end) {
+              const pauseStart = new Date(pausedInterval.start);
+              const pauseEnd = new Date(pausedInterval.end);
+              const pauseStartMinutes = pauseStart.getHours() * 60 + pauseStart.getMinutes();
+              const pauseEndMinutes = pauseEnd.getHours() * 60 + pauseEnd.getMinutes();
+              
+              // 일시정지 전까지의 활동 세그먼트
+              if (currentStart < pauseStartMinutes) {
+                segments.push({ start: currentStart, end: pauseStartMinutes, type: 'active' });
+              }
+              
+              // 일시정지 세그먼트
+              segments.push({ start: pauseStartMinutes, end: pauseEndMinutes, type: 'paused' });
+              
+              currentStart = pauseEndMinutes;
+            }
+          });
+          
+          // 마지막 활동 세그먼트
+          if (currentStart < recordEndMinutes) {
+            segments.push({ start: currentStart, end: recordEndMinutes, type: 'active' });
+          }
+          
+          // 기존 활동 바 제거하고 세그먼트별로 다시 생성
+          activityArea.removeChild(activityBar);
+          
+          segments.forEach(segment => {
+            if (segment.start < minutes + 30 && segment.end > minutes) {
+              const segmentBar = document.createElement('div');
+              segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
+              
+              const segmentStartOffset = Math.max(0, segment.start - minutes);
+              const segmentEndOffset = Math.min(30, segment.end - minutes);
+              const segmentHeight = ((segmentEndOffset - segmentStartOffset) / 30) * 100;
+              const segmentTop = (segmentStartOffset / 30) * 100;
+              
+              segmentBar.style.height = `${segmentHeight}%`;
+              segmentBar.style.top = `${segmentTop}%`;
+              
+              // 활동 제목은 첫 번째 활성 세그먼트에만 추가
+              if (segment.type === 'active' && segment.start >= minutes && segment.start < minutes + 30 && recordStartMinutes >= minutes && recordStartMinutes < minutes + 30) {
+                const activityTitle = document.createElement('div');
+                activityTitle.className = 'activity-title';
+                
+                // 활동 시간 계산 (밀리초를 분으로 변환)
+                const durationMinutes = Math.round(record.duration / (1000 * 60));
+                let timeText = '';
+                
+                if (durationMinutes >= 60) {
+                  const hours = Math.floor(durationMinutes / 60);
+                  const mins = durationMinutes % 60;
+                  timeText = mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
+                } else if (durationMinutes > 0) {
+                  timeText = `${durationMinutes}분`;
+                }
+                
+                // 활동 시간이 있으면 텍스트 표시
+                if (timeText) {
+                  activityTitle.textContent = timeText;
+                  segmentBar.appendChild(activityTitle);
+                }
+              }
+              
+              activityArea.appendChild(segmentBar);
+            }
+          });
+        }
+      });
+    }
+    
+    timeBlock.appendChild(timeLabel);
+    timeBlock.appendChild(activityArea);
+    hourlyTimelineEl.appendChild(timeBlock);
   }
+  
+  // 현재 시간 표시선 초기 생성
+  updateCurrentTimeLine();
 }
 
 // 통계 업데이트
@@ -406,6 +614,80 @@ function initNavigation() {
 
 
 
+// 현재 시간으로 스크롤 (초기 로드 시에만 사용)
+function scrollToCurrentTime() {
+  const currentTime = new Date();
+  const scrollCurrentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  const currentBlockIndex = Math.floor(scrollCurrentMinutes / 30);
+  const currentBlock = hourlyTimelineEl.children[currentBlockIndex];
+  
+  if (currentBlock) {
+    // 현재 시간 블록이 화면 중앙에 오도록 스크롤
+    const containerHeight = hourlyTimelineEl.parentElement.clientHeight;
+    const blockHeight = currentBlock.offsetHeight;
+    const scrollTop = currentBlock.offsetTop - (containerHeight / 2) + (blockHeight / 2);
+    
+    hourlyTimelineEl.parentElement.scrollTop = Math.max(0, scrollTop);
+  }
+}
+
+// 현재 시간 표시선 업데이트
+function updateCurrentTimeLine() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  // 기존 현재 시간 표시선 제거
+  const existingLines = document.querySelectorAll('.current-time-line');
+  existingLines.forEach(line => line.remove());
+  
+  // 현재 시간이 속한 30분 블록 찾기
+  const currentBlockIndex = Math.floor(currentMinutes / 30);
+  const timeBlocks = document.querySelectorAll('.time-block');
+  
+  if (timeBlocks[currentBlockIndex]) {
+    const timeBlock = timeBlocks[currentBlockIndex];
+    const blockStartMinutes = currentBlockIndex * 30;
+    
+    // 현재 시간 표시선 생성
+    const currentTimeLine = document.createElement('div');
+    currentTimeLine.className = 'current-time-line';
+    const currentTimeOffset = ((currentMinutes - blockStartMinutes) / 30) * 100;
+    currentTimeLine.style.top = `${currentTimeOffset}%`;
+    
+    // 현재 시간 텍스트 추가
+    const currentTimeText = document.createElement('div');
+    currentTimeText.className = 'current-time-text';
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+    currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+    currentTimeLine.appendChild(currentTimeText);
+    
+    timeBlock.appendChild(currentTimeLine);
+  }
+}
+
+// 실시간 현재 시간 업데이트
+function startRealTimeUpdate() {
+  // 매분마다 현재 시간 표시선만 업데이트
+  setInterval(() => {
+    updateCurrentTimeLine();
+  }, 60000); // 60초마다 업데이트
+  
+  // 매초마다 현재 시간 텍스트만 업데이트
+  setInterval(() => {
+    const currentTimeText = document.querySelector('.current-time-text');
+    
+    if (currentTimeText) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+      currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+    }
+  }, 1000); // 1초마다 업데이트
+}
+
 // 초기화
 async function init() {
   // 기록 로드
@@ -417,6 +699,16 @@ async function init() {
   renderDailyView();
   updateStats();
   initNavigation();
+  
+  // 초기 로드 시 현재 시간으로 스크롤 (오늘 날짜일 때만)
+  if (!selectedDate || selectedDate.toDateString() === new Date().toDateString()) {
+    setTimeout(() => {
+      scrollToCurrentTime();
+    }, 100); // DOM 렌더링 완료 후 스크롤
+  }
+  
+  // 실시간 업데이트 시작
+  startRealTimeUpdate();
 }
 
 // 앱 시작

@@ -2,6 +2,10 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 body {
@@ -84,7 +88,7 @@ body {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 0;
   flex: 1;
   grid-template-rows: repeat(7, 1fr);
   margin: 0 10px 10px 10px;
@@ -94,8 +98,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  border-radius: 8px;
+  justify-content: space-between;
+  border-radius: 0;
+  border: 0.5px solid #f5f5f5;
   cursor: pointer;
   transition: background-color 0.2s;
   font-size: 16px;
@@ -105,7 +110,8 @@ body {
 
 .calendar-day .day-number {
   font-weight: bold;
-  margin-bottom: 4px;
+  text-align: center;
+  align-self: center;
 }
 
 .calendar-day .day-time {
@@ -113,6 +119,7 @@ body {
   color: #666;
   text-align: center;
   line-height: 1.2;
+  align-self: center;
 }
 
 .calendar-day:hover {
@@ -142,8 +149,6 @@ body {
 }
 
 .calendar-day.has-record {
-  background-color: #E8F5E8;
-  color: #2E7D32;
   font-weight: bold;
 }
 
@@ -165,23 +170,23 @@ body {
 
 .timer-section {
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .timer-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  background: white;
+  border-radius: 12px;
   padding: 25px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border: 1px solid #e9ecef;
   text-align: center;
 }
 
 .daily-timeline-section {
   flex: 1;
-  padding: 20px;
-  background: #f8f9fa;
+  padding: 16px;
+  background: #f2f2f7;
   overflow-y: auto;
 }
 
@@ -189,74 +194,137 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 16px;
+  padding: 0 4px;
 }
 
 .daily-header h2 {
   margin: 0;
-  color: #333;
-  font-size: 24px;
+  color: #1c1c1e;
+  font-size: 22px;
   font-weight: 600;
 }
 
 .daily-total {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #4CAF50;
-  background: rgba(76, 175, 80, 0.1);
-  padding: 8px 16px;
-  border-radius: 20px;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.1);
+  padding: 6px 12px;
+  border-radius: 12px;
 }
 
 .hourly-timeline {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-}
-
-.hour-block {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
+  gap: 0;
   background: white;
   border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 2px;
-  border-left: 4px solid #e9ecef;
-  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
 }
 
-.hour-block.has-activity {
-  border-left-color: #4CAF50;
-  background: rgba(76, 175, 80, 0.05);
+.time-block {
+  display: flex;
+  min-height: 30px;
+  border-bottom: 1px solid #f1f3f4;
+  position: relative;
 }
 
-.hour-time {
-  font-size: 14px;
-  font-weight: 600;
-  color: #666;
+.time-block:last-child {
+  border-bottom: none;
+}
+
+.time-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8e8e93;
   width: 60px;
   flex-shrink: 0;
+  text-align: right;
+  padding: 4px 8px 4px 0;
+  border-right: 1px solid #f1f3f4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
-.hour-activity {
+.activity-area {
   flex: 1;
-  margin-left: 15px;
+  position: relative;
+  min-height: 30px;
 }
 
-.activity-bar {
-  height: 6px;
-  background: #4CAF50;
-  border-radius: 3px;
-  margin-bottom: 4px;
+.activity-bar-vertical {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  background: #ff3b30;
+  border-radius: 4px;
+  min-height: 2px;
 }
 
-.activity-duration {
-  font-size: 12px;
-  color: #4CAF50;
+.activity-bar-paused {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  background: #ffcccc;
+  border-radius: 4px;
+  min-height: 2px;
+  opacity: 0.6;
+}
+
+.activity-title {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #ff3b30;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 3px;
+  z-index: 5;
+}
+
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ff3b30;
+  z-index: 10;
+  border-radius: 1px;
+}
+
+.current-time-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  background: #ff3b30;
+  border-radius: 50%;
+}
+
+.current-time-text {
+  position: absolute;
+  left: 8px;
+  top: -8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ff3b30;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #ff3b30;
+  white-space: nowrap;
+  z-index: 11;
 }
 
 /* 시간 화면 스타일 */
@@ -275,12 +343,14 @@ body {
   font-weight: 300;
   margin-bottom: 8px;
   letter-spacing: 2px;
+  color: #333;
 }
 
 .total-timer {
   font-size: 16px;
-  opacity: 0.8;
+  opacity: 0.6;
   font-weight: 300;
+  color: #666;
 }
 
 .timer-controls {
@@ -398,26 +468,37 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
   padding: 10px;
 }
 
-.nav-item:hover {
-  background-color: #f5f5f5;
-}
 
-.nav-item.active {
-  background-color: #E8F5E8;
-}
 
 .nav-icon {
-  font-size: 24px;
   margin-bottom: 4px;
+  transition: all 0.3s ease;
+  color: #999;
+}
+
+.nav-icon svg {
+  transition: all 0.3s ease;
+}
+
+.nav-item.active .nav-icon {
+  color: #4CAF50;
+  transform: scale(1.1);
+}
+
+.nav-item.active .nav-icon svg {
+  fill: rgba(76, 175, 80, 0.1);
+  stroke: #4CAF50;
+  stroke-width: 2.5;
 }
 
 .nav-label {
   font-size: 12px;
   color: #666;
+  transition: all 0.2s ease;
 }
 
 .nav-item.active .nav-label {
