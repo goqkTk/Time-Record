@@ -25,23 +25,18 @@
       <!-- 시간 화면 -->
       <div id="time-view" class="view active">
         <div class="daily-view">
-          <!-- 타이머 섹션 -->
-          <div class="timer-section">
-            <div class="timer-card">
-              <div class="timer-display">
-                <div class="current-timer" id="timer">00:00:00</div>
-                <div class="total-timer" id="totalTimer">총 00:00:00</div>
-              </div>
-              <div class="timer-controls">
-                <button id="startBtn" class="timer-btn start-btn">▶</button>
-                <button id="pauseBtn" class="timer-btn pause-btn" style="display: none;">⏸</button>
-                <button id="stopBtn" class="timer-btn stop-btn" style="display: none;">⏹</button>
-              </div>
+          <!-- 플로팅 타이머 -->
+          <div class="floating-timer" id="floatingTimer">
+            <button id="startBtn" class="floating-timer-btn start-only">▶</button>
+            <div class="floating-timer-display" id="timerDisplay" style="display: none;">
+              <span id="timer" class="current-timer">0:00:00</span>
             </div>
+            <button id="pauseBtn" class="floating-timer-btn" style="display: none;">⏸</button>
+            <button id="stopBtn" class="floating-timer-btn" style="display: none;">⏹</button>
           </div>
           
           <!-- 일간뷰 섹션 -->
-          <div class="daily-timeline-section">
+          <div class="daily-timeline-section full-height">
             <div class="daily-header">
               <h2 id="dailyDate">오늘</h2>
               <div class="daily-total" id="dailyTotal">0:00</div>

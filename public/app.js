@@ -12,10 +12,11 @@ let sessionStartTime = null; // 세션 시작 시간
 
 // DOM 요소들
 const timerEl = document.getElementById('timer');
-const totalTimerEl = document.getElementById('totalTimer');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const stopBtn = document.getElementById('stopBtn');
+const floatingTimer = document.getElementById('floatingTimer');
+const timerDisplay = document.getElementById('timerDisplay');
 const calendarGrid = document.getElementById('calendarGrid');
 const currentMonthEl = document.getElementById('currentMonth');
 const prevMonthBtn = document.getElementById('prevMonth');
@@ -77,7 +78,7 @@ function resetTimer() {
 }
 
 function updateTotalTimer() {
-  totalTimerEl.textContent = '총: ' + formatTime(totalElapsed);
+  // 플로팅 타이머에서는 총 시간 표시 제거
 }
 
 startBtn.onclick = () => {
@@ -95,11 +96,17 @@ startBtn.onclick = () => {
   timerInterval = setInterval(updateTimer, 1000);
   isPaused = false;
   
+  // 타이머 UI 확장 애니메이션
+  floatingTimer.classList.add('expanded');
+  timerDisplay.style.display = 'block';
+  
   // 버튼 상태 변경
   startBtn.style.display = 'none';
   pauseBtn.style.display = 'flex';
   stopBtn.style.display = 'flex';
 };
+
+
 
 pauseBtn.onclick = () => {
   clearInterval(timerInterval);
@@ -110,12 +117,14 @@ pauseBtn.onclick = () => {
   pausedIntervals.push({ start: pauseStartTime });
   
   isPaused = true;
+  timerInterval = null;
   
   // 현재 타이머 리셋하고 총 시간 업데이트
   resetTimer();
   updateTotalTimer();
   
-  // 버튼 상태 변경
+  // 버튼 상태 변경 (재시작 아이콘으로 변경)
+  startBtn.innerHTML = '⏯';
   startBtn.style.display = 'flex';
   pauseBtn.style.display = 'none';
   stopBtn.style.display = 'flex';
@@ -158,7 +167,7 @@ stopBtn.onclick = async () => {
           startTime: new Date(sessionStartTime).toISOString(),
           endTime: sessionEndTime.toISOString(),
           duration: actualWorkDuration,
-          pausedIntervals: pausedIntervals
+          paused_intervals: pausedIntervals
         })
       });
       
@@ -179,9 +188,15 @@ stopBtn.onclick = async () => {
   isPaused = false;
   sessionStartTime = null;
   pausedIntervals = [];
+  timerInterval = null;
   updateTotalTimer();
   
-  // 버튼 상태 변경
+  // UI 초기 상태로 복원
+  floatingTimer.classList.remove('expanded');
+  timerDisplay.style.display = 'none';
+  
+  // 버튼 상태 초기화
+  startBtn.innerHTML = '▶';
   startBtn.style.display = 'flex';
   pauseBtn.style.display = 'none';
   stopBtn.style.display = 'none';
@@ -382,10 +397,10 @@ function renderDailyView() {
       
       if (sessionStartMinutes < minutes + 30 && sessionEndMinutes > minutes) {
         currentSessionRecord = {
-          start_time: sessionStart.toISOString(),
-          duration: totalElapsed + elapsed,
-          paused_intervals: pausedIntervals
-        };
+        start_time: sessionStart.toISOString(),
+        duration: totalElapsed + elapsed,
+        paused_intervals: pausedIntervals
+      };
       }
     }
     
