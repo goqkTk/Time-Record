@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Record</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 20px 16px 8px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #333;
+            box-shadow: 0 0 0 3px rgba(51, 51, 51, 0.1);
+        }
+
+        .form-input:focus + .form-label,
+        .form-input:not(:placeholder-shown) + .form-label {
+            transform: translateY(-36px) scale(0.85);
+            color: #333;
+        }
+
+        .form-label {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8b949e;
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            background: white;
+            padding: 0 4px;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 18px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .auth-button:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
+
+        .auth-button:active {
+            transform: translateY(0);
+        }
+
+        .auth-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .auth-switch {
+            color: #8b949e;
+            font-size: 14px;
+        }
+
+        .auth-switch-link {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .auth-switch-link:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #363;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h1 class="auth-title">Time Record</h1>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <form id="authForm">
+            <div class="form-group">
+                <input type="text" id="username" class="form-input" placeholder=" " required autocomplete="off">
+                <label class="form-label" for="username">아이디</label>
+            </div>
+                
+            <div class="form-group">
+                <input type="password" id="password" class="form-input" placeholder=" " required autocomplete="off">
+                <label class="form-label" for="password">비밀번호</label>
+            </div>
+                
+            <div class="form-group" id="confirmPasswordGroup" style="display: none;">
+                <input type="password" id="confirmPassword" class="form-input" placeholder=" ">
+                <label class="form-label" for="confirmPassword">비밀번호 확인</label>
+            </div>
+            
+            <button type="submit" class="auth-button" id="authButton">
+                <span id="buttonText">로그인</span>
+                <span class="loading" id="loading" style="display: none;"></span>
+            </button>
+        </form>
+        
+        <p class="auth-switch">
+            <span id="switchText">계정이 없으신가요?</span>
+            <a href="#" class="auth-switch-link" id="switchLink">회원가입</a>
+        </p>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+        
+        const authForm = document.getElementById('authForm');
+        const authButton = document.getElementById('authButton');
+        const buttonText = document.getElementById('buttonText');
+        const loading = document.getElementById('loading');
+        const switchLink = document.getElementById('switchLink');
+        const switchText = document.getElementById('switchText');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+        
+        // 모드 전환
+        switchLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            updateUI();
+            clearMessages();
+        });
+        
+        function updateUI() {
+            if (isLoginMode) {
+                buttonText.textContent = '로그인';
+                switchText.textContent = '계정이 없으신가요?';
+                switchLink.textContent = '회원가입';
+                
+                confirmPasswordGroup.style.display = 'none';
+                confirmPasswordInput.removeAttribute('required');
+            } else {
+                buttonText.textContent = '회원가입';
+                switchText.textContent = '이미 계정이 있으신가요?';
+                switchLink.textContent = '로그인';
+                
+                confirmPasswordGroup.style.display = 'block';
+                confirmPasswordInput.setAttribute('required', 'required');
+            }
+        }
+        
+        function setLoading(loading) {
+            const loadingSpinner = document.getElementById('loading');
+            const buttonTextEl = document.getElementById('buttonText');
+            
+            if (loading) {
+                authButton.disabled = true;
+                buttonTextEl.style.display = 'none';
+                loadingSpinner.style.display = 'block';
+            } else {
+                authButton.disabled = false;
+                buttonTextEl.style.display = 'block';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+        
+        function clearMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+        
+        // 폼 제출
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            
+            if (!username || !password) {
+                showError('모든 필드를 입력해주세요.');
+                return;
+            }
+            
+            if (!isLoginMode) {
+                const confirmPassword = confirmPasswordInput.value;
+                if (!confirmPassword) {
+                    showError('모든 필드를 입력해주세요.');
+                    return;
+                }
+                if (password !== confirmPassword) {
+                    showError('비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+            }
+            
+            setLoading(true);
+            clearMessages();
+            
+            try {
+                const endpoint = isLoginMode ? '/api/login' : '/api/register';
+                const body = isLoginMode 
+                    ? { username, password }
+                    : { username, password, confirmPassword: confirmPasswordInput.value };
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (isLoginMode) {
+                        showSuccess('로그인되었습니다.');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        showSuccess('회원가입이 완료되었습니다. 로그인해주세요.');
+                        setTimeout(() => {
+                            isLoginMode = true;
+                            updateUI();
+                            clearMessages();
+                            usernameInput.value = '';
+                            passwordInput.value = '';
+                            confirmPasswordInput.value = '';
+                        }, 1500);
+                    }
+                } else {
+                    showError(data.error || '오류가 발생했습니다.');
+                }
+            } catch (error) {
+                showError('서버 연결에 실패했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

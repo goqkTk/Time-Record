@@ -30,6 +30,7 @@ const selectedMonthTimeEl = document.getElementById('selectedMonthTime');
 const dailyDateEl = document.getElementById('dailyDate');
 const dailyTotalEl = document.getElementById('dailyTotal');
 const hourlyTimelineEl = document.getElementById('hourlyTimeline');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // 유틸리티 함수들
 function formatTime(ms) {
@@ -590,9 +591,18 @@ function updateStats() {
 // 기록 로드
 async function loadRecords() {
   try {
-    const response = await fetch('/api/records');
+    const response = await fetch('/api/records', {
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
     if (response.ok) {
       records = await response.json();
+      console.log('기록 로드 완료:', records.length + '개');
+    } else {
+      console.error('기록 로드 실패:', response.status);
+      records = [];
     }
   } catch (error) {
     console.error('기록 로드 실패:', error);
@@ -634,15 +644,24 @@ function scrollToCurrentTime() {
   const currentTime = new Date();
   const scrollCurrentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
   const currentBlockIndex = Math.floor(scrollCurrentMinutes / 30);
+  
+  if (!hourlyTimelineEl) {
+    console.log('타임라인 요소를 찾을 수 없습니다.');
+    return;
+  }
+  
   const currentBlock = hourlyTimelineEl.children[currentBlockIndex];
   
   if (currentBlock) {
-    // 현재 시간 블록이 화면 중앙에 오도록 스크롤
-    const containerHeight = hourlyTimelineEl.parentElement.clientHeight;
+    // hourlyTimelineEl 자체가 스크롤 컨테이너입니다
+    const containerHeight = hourlyTimelineEl.clientHeight;
     const blockHeight = currentBlock.offsetHeight;
     const scrollTop = currentBlock.offsetTop - (containerHeight / 2) + (blockHeight / 2);
     
-    hourlyTimelineEl.parentElement.scrollTop = Math.max(0, scrollTop);
+    hourlyTimelineEl.scrollTop = Math.max(0, scrollTop);
+    console.log(`현재 시간(${currentTime.getHours()}:${currentTime.getMinutes()})으로 스크롤 완료 - scrollTop: ${hourlyTimelineEl.scrollTop}`);
+  } else {
+    console.log('현재 시간 블록을 찾을 수 없습니다. 블록 인덱스:', currentBlockIndex, '총 블록 수:', hourlyTimelineEl.children.length);
   }
 }
 
@@ -703,8 +722,165 @@ function startRealTimeUpdate() {
   }, 1000); // 1초마다 업데이트
 }
 
+// 인증 상태 확인 함수
+async function checkAuth() {
+  try {
+    const response = await fetch('/api/auth/check');
+    const data = await response.json();
+    
+    if (!data.authenticated) {
+      window.location.href = '/login';
+      return false;
+    }
+    
+    // 사용자 정보 표시 (선택사항)
+    if (data.username) {
+      console.log('로그인된 사용자:', data.username);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('인증 확인 실패:', error);
+    window.location.href = '/login';
+    return false;
+  }
+}
+
+// 로그아웃 함수
+async function logout() {
+  try {
+    const response = await fetch('/api/logout', {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      window.location.href = '/login';
+    }
+  } catch (error) {
+    console.error('로그아웃 실패:', error);
+  }
+}
+
+// 플로팅 메뉴 기능
+function initFloatingMenu() {
+  const menuToggleBtn = document.getElementById('menuToggleBtn');
+  const menuOptions = document.getElementById('menuOptions');
+  const timeInputBtn = document.getElementById('timeInputBtn');
+  const timeInputModal = document.getElementById('timeInputModal');
+  const modalClose = document.getElementById('modalClose');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const saveTimeBtn = document.getElementById('saveTimeBtn');
+  const startTimeInput = document.getElementById('startTimeInput');
+  const endTimeInput = document.getElementById('endTimeInput');
+  
+  let isMenuOpen = false;
+  
+  // 메뉴 토글
+  menuToggleBtn.addEventListener('click', () => {
+    isMenuOpen = !isMenuOpen;
+    menuToggleBtn.classList.toggle('active', isMenuOpen);
+    menuOptions.classList.toggle('active', isMenuOpen);
+  });
+  
+  // 메뉴 외부 클릭 시 닫기
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.floating-menu') && isMenuOpen) {
+      isMenuOpen = false;
+      menuToggleBtn.classList.remove('active');
+      menuOptions.classList.remove('active');
+    }
+  });
+  
+  // 시간 입력 버튼 클릭
+  timeInputBtn.addEventListener('click', () => {
+    timeInputModal.classList.add('active');
+    // 현재 시간으로 기본값 설정
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5);
+    startTimeInput.value = currentTime;
+    endTimeInput.value = currentTime;
+  });
+  
+  // 모달 닫기
+  const closeModal = () => {
+    timeInputModal.classList.remove('active');
+    startTimeInput.value = '';
+    endTimeInput.value = '';
+  };
+  
+  modalClose.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  
+  // 모달 배경 클릭 시 닫기
+  timeInputModal.addEventListener('click', (e) => {
+    if (e.target === timeInputModal) {
+      closeModal();
+    }
+  });
+  
+  // 시간 저장
+  saveTimeBtn.addEventListener('click', async () => {
+    const startTime = startTimeInput.value;
+    const endTime = endTimeInput.value;
+    
+    if (!startTime || !endTime) {
+      alert('시작 시간과 종료 시간을 모두 입력해주세요.');
+      return;
+    }
+    
+    if (startTime >= endTime) {
+      alert('종료 시간은 시작 시간보다 늦어야 합니다.');
+      return;
+    }
+    
+    try {
+      // 현재 선택된 날짜 또는 오늘 날짜 사용
+      const targetDate = selectedDate || new Date();
+      const dateStr = targetDate.toISOString().split('T')[0];
+      
+      // 시작 시간과 종료 시간을 Date 객체로 변환
+      const startDateTime = new Date(`${dateStr}T${startTime}:00`);
+      const endDateTime = new Date(`${dateStr}T${endTime}:00`);
+      
+      const duration = endDateTime.getTime() - startDateTime.getTime();
+      
+      const response = await fetch('/api/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          duration: duration,
+          paused_intervals: []
+        })
+      });
+      
+      if (response.ok) {
+        console.log('시간 기록이 저장되었습니다.');
+        await loadRecords();
+        renderDailyView();
+        updateStats();
+        closeModal();
+      } else {
+        throw new Error('저장 실패');
+      }
+    } catch (error) {
+      console.error('시간 저장 중 오류:', error);
+      alert('시간 저장 중 오류가 발생했습니다.');
+    }
+  });
+}
+
 // 초기화
 async function init() {
+  // 인증 상태 확인
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) {
+    return;
+  }
+  
   // 기록 로드
   await loadRecords();
   
@@ -714,16 +890,22 @@ async function init() {
   renderDailyView();
   updateStats();
   initNavigation();
+  initFloatingMenu();
   
   // 초기 로드 시 현재 시간으로 스크롤 (오늘 날짜일 때만)
   if (!selectedDate || selectedDate.toDateString() === new Date().toDateString()) {
     setTimeout(() => {
       scrollToCurrentTime();
-    }, 100); // DOM 렌더링 완료 후 스크롤
+    }, 500); // DOM 렌더링 완료 후 스크롤 (지연시간 증가)
   }
   
   // 실시간 업데이트 시작
   startRealTimeUpdate();
+  
+  // 로그아웃 버튼 이벤트
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+  }
 }
 
 // 앱 시작

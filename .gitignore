@@ -2,3 +2,4 @@ node_modules
 package-lock.json
 .env
 time-record.db
+init-db.js
