@@ -12,6 +12,7 @@ let sessionStartTime = null; // 세션 시작 시간
 
 // DOM 요소들
 const timerEl = document.getElementById('timer');
+const totalTimerEl = document.getElementById('totalTimer');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -31,6 +32,14 @@ const dailyDateEl = document.getElementById('dailyDate');
 const dailyTotalEl = document.getElementById('dailyTotal');
 const hourlyTimelineEl = document.getElementById('hourlyTimeline');
 const logoutBtn = document.getElementById('logoutBtn');
+const timerToggle = document.getElementById('timerToggle');
+const timerOption = document.getElementById('timerOption');
+const timeFormatSelect = document.getElementById('timeFormatSelect');
+const weekStartSelect = document.getElementById('weekStartSelect');
+const darkModeToggle = document.getElementById('darkModeToggle');
+const exportDataBtn = document.getElementById('exportDataBtn');
+const importDataBtn = document.getElementById('importDataBtn');
+const importDataInput = document.getElementById('importDataInput');
 
 // 유틸리티 함수들
 function formatTime(ms) {
@@ -70,7 +79,7 @@ function updateTimer() {
   const now = Date.now();
   elapsed = now - startTime;
   timerEl.textContent = formatTime(elapsed);
-  totalTimerEl.textContent = '총: ' + formatTime(totalElapsed + elapsed);
+  updateTotalTimer();
 }
 
 function resetTimer() {
@@ -79,7 +88,9 @@ function resetTimer() {
 }
 
 function updateTotalTimer() {
-  // 플로팅 타이머에서는 총 시간 표시 제거
+  if (totalTimerEl) {
+    totalTimerEl.textContent = formatTime(totalElapsed + elapsed);
+  }
 }
 
 startBtn.onclick = () => {
@@ -161,7 +172,7 @@ stopBtn.onclick = async () => {
     try {
       const sessionEndTime = new Date();
       
-      await fetch('/api/record', {
+      await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,6 +278,10 @@ function renderCalendar() {
     // 오늘 날짜 표시
      if (isToday(currentDay)) {
        dayEl.classList.add('today');
+       // 다른 날짜가 선택된 경우에만 today-unselected 클래스 추가
+       if (selectedDate && !isToday(selectedDate)) {
+         dayEl.classList.add('today-unselected');
+       }
      }
      
      // 선택된 날짜 표시
@@ -614,13 +629,60 @@ async function loadRecords() {
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
+  const timeCalendarToggle = document.getElementById('time-calendar-toggle');
   
   navItems.forEach(item => {
     item.addEventListener('click', () => {
+      // 시간/달력 토글 버튼인 경우 특별 처리
+      if (item.id === 'time-calendar-toggle') {
+        // 이미 활성화된 상태에서 클릭하면 토글
+        if (item.classList.contains('active')) {
+          handleTimeCalendarToggle(item);
+        } else {
+          // 다른 탭에서 시간/달력 탭으로 돌아올 때는 기본 시간 모드로 설정
+          resetTimeCalendarToDefault(item);
+          // 모든 네비게이션 아이템에서 active 클래스 제거
+          navItems.forEach(nav => nav.classList.remove('active'));
+          // 클릭된 아이템에 active 클래스 추가
+          item.classList.add('active');
+          // 모든 뷰 숨기기
+          views.forEach(view => view.classList.remove('active'));
+          // 시간 뷰 활성화
+          document.getElementById('time-view').classList.add('active');
+        }
+        return;
+      }
+      
       const targetView = item.dataset.view;
       
       // 모든 네비게이션 아이템에서 active 클래스 제거
       navItems.forEach(nav => nav.classList.remove('active'));
+
+      // 시간/달력 탭이 비활성화될 때 모든 아이콘을 회색으로 설정
+      if (timeCalendarToggle && !timeCalendarToggle.classList.contains('active')) {
+        const navIcon = timeCalendarToggle.querySelector('.nav-icon');
+        const navLabel = timeCalendarToggle.querySelector('.nav-label');
+        
+        // 모든 아이콘과 텍스트를 회색으로 설정
+        navLabel.innerHTML = '<span style="color: #6b7280;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
+        
+        navIcon.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12,6 12,12 16,14"></polyline>
+          </svg>
+          <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        `;
+      }
+
+      // 클릭된 아이템에 active 클래스 추가
+      item.classList.add('active');
       // 클릭된 아이템에 active 클래스 추가
       item.classList.add('active');
       
@@ -628,13 +690,97 @@ function initNavigation() {
       views.forEach(view => view.classList.remove('active'));
       // 선택된 뷰 보이기
       document.getElementById(targetView).classList.add('active');
-      
-      // 시간 뷰로 전환할 때 타임라인 업데이트
-      if (targetView === 'time-view') {
-        updateTimeline();
-      }
     });
   });
+}
+
+// 시간/달력 탭을 기본 시간 모드로 리셋
+function resetTimeCalendarToDefault(toggleBtn) {
+  const navIcon = toggleBtn.querySelector('.nav-icon');
+  const navLabel = toggleBtn.querySelector('.nav-label');
+  
+  // 기본 시간 모드로 설정
+  toggleBtn.dataset.mode = 'time';
+  toggleBtn.dataset.view = 'time-view';
+  
+  // 시간만 선택된 상태로 표시 (시간: 초록색, 달력: 회색)
+  navLabel.innerHTML = '<span style="color: #10b981;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
+  
+  navIcon.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+      <circle cx="12" cy="12" r="10"></circle>
+      <polyline points="12,6 12,12 16,14"></polyline>
+    </svg>
+    <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+  `;
+}
+
+// 시간/달력 토글 처리
+function handleTimeCalendarToggle(toggleBtn) {
+  const currentMode = toggleBtn.dataset.mode;
+  const navIcon = toggleBtn.querySelector('.nav-icon');
+  const navLabel = toggleBtn.querySelector('.nav-label');
+  const views = document.querySelectorAll('.view');
+  
+  // 모든 뷰 숨기기
+  views.forEach(view => view.classList.remove('active'));
+  
+  if (currentMode === 'time') {
+    // 시간 -> 달력으로 전환
+    toggleBtn.dataset.mode = 'calendar';
+    toggleBtn.dataset.view = 'calendar-view';
+    navLabel.innerHTML = '<span style="color: #6b7280;">시간</span><span style="color: #6b7280;">/</span><span style="color: #10b981;">달력</span>';
+    
+    // 달력 모드: 달력만 선택된 상태로 표시 (시간: 회색, 달력: 초록색)
+     navIcon.innerHTML = `
+       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+         <circle cx="12" cy="12" r="10"></circle>
+         <polyline points="12,6 12,12 16,14"></polyline>
+       </svg>
+       <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
+       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+         <line x1="16" y1="2" x2="16" y2="6"></line>
+         <line x1="8" y1="2" x2="8" y2="6"></line>
+         <line x1="3" y1="10" x2="21" y2="10"></line>
+       </svg>
+     `;
+    
+    // 달력 뷰 활성화
+    document.getElementById('calendar-view').classList.add('active');
+  } else {
+    // 달력 -> 시간으로 전환
+    toggleBtn.dataset.mode = 'time';
+    toggleBtn.dataset.view = 'time-view';
+    navLabel.innerHTML = '<span style="color: #10b981;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
+    
+    // 시간 모드: 시간만 선택된 상태로 표시 (시간: 초록색, 달력: 회색)
+     navIcon.innerHTML = `
+       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+         <circle cx="12" cy="12" r="10"></circle>
+         <polyline points="12,6 12,12 16,14"></polyline>
+       </svg>
+       <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
+       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+         <line x1="16" y1="2" x2="16" y2="6"></line>
+         <line x1="8" y1="2" x2="8" y2="6"></line>
+         <line x1="3" y1="10" x2="21" y2="10"></line>
+       </svg>
+     `;
+    
+    // 시간 뷰 활성화
+    document.getElementById('time-view').classList.add('active');
+    
+    // 시간 뷰로 전환할 때 타임라인 업데이트
+    updateCurrentTimeLine();
+  }
 }
 
 
@@ -749,7 +895,7 @@ async function checkAuth() {
 // 로그아웃 함수
 async function logout() {
   try {
-    const response = await fetch('/api/logout', {
+    const response = await fetch('/api/auth/logout', {
       method: 'POST'
     });
     
@@ -844,7 +990,7 @@ function initFloatingMenu() {
       
       const duration = endDateTime.getTime() - startDateTime.getTime();
       
-      const response = await fetch('/api/record', {
+      const response = await fetch('/api/records', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -873,6 +1019,216 @@ function initFloatingMenu() {
   });
 }
 
+// 사용자 설정 로드
+async function loadUserSettings() {
+  try {
+    const response = await fetch('/api/settings');
+    if (response.ok) {
+      const settings = await response.json();
+      return settings;
+    } else {
+      console.error('설정 로드 실패:', response.status);
+      return {};
+    }
+  } catch (error) {
+    console.error('설정 로드 오류:', error);
+    return {};
+  }
+}
+
+// 사용자 설정 저장
+async function saveUserSetting(settingKey, settingValue) {
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        settingKey,
+        settingValue
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('설정 저장 실패:', response.status);
+    }
+  } catch (error) {
+    console.error('설정 저장 오류:', error);
+  }
+}
+
+// 타이머 토글 기능
+async function initTimerToggle() {
+  // 서버에서 사용자 설정 불러오기
+  const settings = await loadUserSettings();
+  const isVisible = settings.timerVisible === undefined ? true : settings.timerVisible === 'true';
+  
+  // 토글 상태 설정
+  timerToggle.checked = isVisible;
+  
+  // 타이머 옵션 표시/숨김
+  timerOption.style.display = isVisible ? 'block' : 'none';
+  
+  // 토글 이벤트 리스너
+  timerToggle.addEventListener('change', async () => {
+    const visible = timerToggle.checked;
+    timerOption.style.display = visible ? 'block' : 'none';
+    
+    // 서버에 설정 저장
+    await saveUserSetting('timerVisible', visible.toString());
+    
+    // 타이머가 실행 중이고 숨김으로 변경된 경우 타이머 정지
+    if (!visible && timerInterval) {
+      stopBtn.click();
+    }
+  });
+}
+
+// 추가 설정들 초기화
+async function initAdditionalSettings() {
+  const settings = await loadUserSettings();
+  
+  // 시간 형식 설정
+  const timeFormat = settings.timeFormat || '24';
+  timeFormatSelect.value = timeFormat;
+  timeFormatSelect.addEventListener('change', async () => {
+    await saveUserSetting('timeFormat', timeFormatSelect.value);
+    // 시간 표시 업데이트
+    updateTimeDisplay();
+  });
+  
+  // 주간 시작일 설정
+  const weekStart = settings.weekStart || '0';
+  weekStartSelect.value = weekStart;
+  weekStartSelect.addEventListener('change', async () => {
+    await saveUserSetting('weekStart', weekStartSelect.value);
+    // 캘린더 다시 렌더링
+    renderCalendar();
+  });
+  
+  // 다크 모드 설정
+  const darkMode = settings.darkMode === 'true';
+  darkModeToggle.checked = darkMode;
+  if (darkMode) {
+    document.body.classList.add('dark-mode');
+  }
+  darkModeToggle.addEventListener('change', async () => {
+    const isDark = darkModeToggle.checked;
+    document.body.classList.toggle('dark-mode', isDark);
+    await saveUserSetting('darkMode', isDark.toString());
+  });
+  
+  // 데이터 내보내기 버튼
+  exportDataBtn.addEventListener('click', exportData);
+  
+  // 데이터 불러오기 버튼
+  importDataBtn.addEventListener('click', () => {
+    importDataInput.click();
+  });
+  
+  // 파일 선택 시 데이터 불러오기
+  importDataInput.addEventListener('change', importData);
+}
+
+// 시간 표시 업데이트 (시간 형식 변경 시)
+function updateTimeDisplay() {
+  // 기존 시간 표시들을 새로운 형식으로 업데이트
+  updateStats();
+  renderDailyView();
+}
+
+// 데이터 내보내기
+async function exportData() {
+  try {
+    const response = await fetch('/api/records');
+    const records = await response.json();
+    
+    const dataStr = JSON.stringify(records, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `time-records-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    alert('데이터가 성공적으로 내보내졌습니다.');
+  } catch (error) {
+    console.error('데이터 내보내기 오류:', error);
+    alert('데이터 내보내기에 실패했습니다.');
+  }
+}
+
+// 데이터 불러오기
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.name.endsWith('.json')) {
+    alert('JSON 파일만 업로드할 수 있습니다.');
+    return;
+  }
+  
+  try {
+    const text = await file.text();
+    const importedRecords = JSON.parse(text);
+    
+    if (!Array.isArray(importedRecords)) {
+      throw new Error('올바른 형식이 아닙니다.');
+    }
+    
+    // 데이터 유효성 검사
+    const validRecords = importedRecords.filter(record => {
+      return record.start_time && record.end_time && record.duration;
+    });
+    
+    if (validRecords.length === 0) {
+      alert('유효한 기록이 없습니다.');
+      return;
+    }
+    
+    if (!confirm(`${validRecords.length}개의 기록을 불러오시겠습니까?`)) {
+      return;
+    }
+    
+    // 서버에 데이터 업로드
+    for (const record of validRecords) {
+      const response = await fetch('/api/records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startTime: record.start_time,
+          endTime: record.end_time,
+          duration: record.duration,
+          pausedIntervals: record.paused_intervals || []
+        })
+      });
+      
+      if (!response.ok) {
+        console.error('기록 업로드 실패:', record);
+      }
+    }
+    
+    // 데이터 다시 로드
+    await loadRecords();
+    updateStats();
+    renderCalendar();
+    renderDailyView();
+    
+    alert(`${validRecords.length}개의 기록을 성공적으로 불러왔습니다.`);
+    
+    // 파일 입력 초기화
+    event.target.value = '';
+    
+  } catch (error) {
+    console.error('데이터 불러오기 오류:', error);
+    alert('데이터 불러오기에 실패했습니다. 파일 형식을 확인해주세요.');
+    event.target.value = '';
+  }
+}
+
 // 초기화
 async function init() {
   // 인증 상태 확인
@@ -891,6 +1247,8 @@ async function init() {
   updateStats();
   initNavigation();
   initFloatingMenu();
+  await initTimerToggle();
+  await initAdditionalSettings();
   
   // 초기 로드 시 현재 시간으로 스크롤 (오늘 날짜일 때만)
   if (!selectedDate || selectedDate.toDateString() === new Date().toDateString()) {

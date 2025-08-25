@@ -1,0 +1,1468 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f5f5;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px;
+  margin-top: 0;
+}
+
+.view {
+  display: none;
+  height: 100%;
+}
+
+.view.active {
+  display: block;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 달력 스타일 */
+.calendar-container {
+  width: 100%;
+  height: calc(100vh - 80px);
+  background: white;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px;
+  margin-bottom: 10px;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 10px;
+  transition: color 0.2s;
+}
+
+.nav-arrow:hover {
+  color: #4CAF50;
+}
+
+.calendar-header h2 {
+  color: #333;
+  font-size: 18px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  flex: 1;
+  grid-template-rows: repeat(7, 1fr);
+  margin: 0 10px 10px 10px;
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 0;
+  border: 0.5px solid #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 16px;
+  padding: 8px 4px;
+  min-height: 60px;
+}
+
+.calendar-day .day-number {
+  font-weight: bold;
+  text-align: center;
+  align-self: center;
+}
+
+.calendar-day .day-time {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  line-height: 1.2;
+  align-self: center;
+}
+
+.calendar-day:hover {
+  background-color: #f0f0f0;
+}
+
+.calendar-day.today {
+  font-weight: bold;
+}
+
+.calendar-day.today .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.calendar-day.selected {
+  font-weight: bold;
+}
+
+.calendar-day.selected .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.calendar-day.today-unselected .day-number {
+  background-color: #2196F3;
+}
+
+.calendar-day.today.selected {
+  font-weight: bold;
+}
+
+.calendar-day.today.selected .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.calendar-day.other-month {
+  color: #ccc;
+}
+
+.calendar-day.has-record {
+  font-weight: bold;
+}
+
+.day-header {
+  font-weight: bold;
+  color: #666;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* 시간 화면 - 일간뷰 */
+.daily-view {
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: relative;
+}
+
+/* 플로팅 메뉴 스타일 */
+.floating-menu {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.menu-toggle-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #4CAF50;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1001;
+}
+
+.menu-toggle-btn:hover {
+  background: #45a049;
+  transform: scale(1.1);
+  box-shadow: 0 6px 25px rgba(76, 175, 80, 0.4);
+}
+
+.menu-toggle-btn.active {
+  background: #ff4757;
+  transform: rotate(45deg);
+}
+
+.menu-toggle-btn.active:hover {
+  background: #ff3742;
+}
+
+.menu-options {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px) scale(0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-options.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.menu-option:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.menu-option:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 플로팅 타이머 스타일 (메뉴 옵션 내부) */
+.floating-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 25px;
+  padding: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.floating-timer.expanded {
+  width: auto;
+  min-width: 200px;
+  padding: 8px 15px;
+  border-radius: 25px;
+}
+
+.floating-timer-btn {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.floating-timer-btn:hover {
+  background-color: rgba(0,0,0,0.1);
+}
+
+.floating-timer-btn.start-only {
+  width: 36px;
+  height: 36px;
+}
+
+.floating-timer-display {
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.floating-timer.expanded .floating-timer-display {
+  opacity: 1;
+}
+
+.floating-timer .current-timer {
+  font-family: 'Courier New', monospace;
+}
+
+.floating-timer .total-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #666;
+  font-weight: 400;
+}
+
+.time-input-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2196F3;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+}
+
+.time-input-btn:hover {
+  background: #1976D2;
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+/* 시간 입력 모달 스타일 */
+.time-input-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.time-input-modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(0.8) translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.time-input-modal.active .modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.time-input-group {
+  margin-bottom: 20px;
+}
+
+.time-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.time-input-group input[type="time"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.time-input-group input[type="time"]:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.btn-cancel, .btn-save {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel {
+  background: #f8f9fa;
+  color: #666;
+}
+
+.btn-cancel:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.btn-save {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-save:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.daily-timeline-section {
+  flex: 1;
+  background: #f2f2f7;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.daily-timeline-section.full-height {
+  padding-top: 80px;
+}
+
+.daily-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f2f2f7;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.daily-header h2 {
+  margin: 0;
+  color: #1c1c1e;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.daily-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.1);
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.hourly-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: white;
+  border-radius: 8px;
+  overflow-y: auto;
+  position: relative;
+  flex: 1;
+  margin: 0 16px 16px 16px;
+}
+
+.time-block {
+  display: flex;
+  min-height: 30px;
+  border-bottom: 1px solid #f1f3f4;
+  position: relative;
+}
+
+.time-block:last-child {
+  border-bottom: none;
+}
+
+.time-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8e8e93;
+  width: 60px;
+  flex-shrink: 0;
+  text-align: right;
+  padding: 4px 8px 4px 0;
+  border-right: 1px solid #f1f3f4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.activity-area {
+  flex: 1;
+  position: relative;
+  min-height: 30px;
+}
+
+.activity-bar-vertical {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  background: #ff3b30;
+  border-radius: 4px;
+  min-height: 2px;
+}
+
+.activity-bar-paused {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  background: #ffcccc;
+  border-radius: 4px;
+  min-height: 2px;
+  opacity: 0.6;
+}
+
+.activity-title {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #ff3b30;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 3px;
+  z-index: 5;
+}
+
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ff3b30;
+  z-index: 10;
+  border-radius: 1px;
+}
+
+.current-time-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  background: #ff3b30;
+  border-radius: 50%;
+}
+
+.current-time-text {
+  position: absolute;
+  left: 8px;
+  top: -8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ff3b30;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #ff3b30;
+  white-space: nowrap;
+  z-index: 11;
+}
+
+
+
+
+
+/* 통계 화면 스타일 */
+.stats-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.stat-card h3 {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #4CAF50;
+}
+
+.stat-date {
+  font-size: 14px;
+  color: #999;
+  margin-top: 5px;
+}
+
+/* 하단 메뉴바 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #eee;
+  display: flex;
+  height: 80px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 10px;
+}
+
+
+
+.nav-icon {
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+  color: #6b7280;
+  position: relative;
+}
+
+.dual-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 60px;
+}
+
+.primary-icon {
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.secondary-icon {
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.icon-separator {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 2px;
+  font-weight: 300;
+}
+
+.nav-item.active:not(#time-calendar-toggle) .primary-icon {
+  opacity: 1;
+}
+
+.nav-item.active:not(#time-calendar-toggle) .secondary-icon {
+  opacity: 0.6;
+}
+
+.nav-item:hover .secondary-icon {
+  opacity: 0.8;
+  color: #4b5563;
+}
+
+.nav-icon svg {
+  transition: all 0.3s ease;
+}
+
+.nav-item.active:not(#time-calendar-toggle) .nav-icon {
+  color: #4CAF50;
+  transform: scale(1.1);
+}
+
+.nav-item.active:not(#time-calendar-toggle) .nav-icon svg {
+  fill: rgba(76, 175, 80, 0.1);
+  stroke: #4CAF50;
+  stroke-width: 2.5;
+}
+
+.nav-label {
+  font-size: 12px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.nav-item.active .nav-label {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+/* 설정 페이지 스타일 */
+.settings-container {
+  padding: 20px 0 100px 0;
+  max-width: 100%;
+  margin: 0;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.setting-group {
+  margin: 0 16px 20px 16px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.group-icon {
+  margin-right: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f4ff;
+  border-radius: 8px;
+  color: #6366f1;
+}
+
+.group-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #6366f1;
+}
+
+.group-info h3 {
+  margin: 0 0 2px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.group-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.group-content {
+  padding: 0;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.setting-desc {
+  display: block;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.setting-select {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+  min-width: 100px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.setting-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.setting-action:last-child {
+  border-bottom: none;
+}
+
+.setting-action.danger {
+  background: #fef2f2;
+}
+
+.action-info {
+  flex: 1;
+}
+
+.action-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.action-desc {
+  display: block;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.action-btn.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.action-btn.secondary {
+  background: #f8fafc;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.action-btn.secondary:hover {
+  background: #f1f5f9;
+  border-color: #d1d5db;
+}
+
+.action-btn.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.action-btn.danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+
+
+/* 토글 스위치 스타일 */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb;
+  transition: all 0.3s ease;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+input:checked + .toggle-slider {
+  background-color: #3b82f6;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-slider:hover {
+  background-color: #d1d5db;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+input:checked + .toggle-slider:hover {
+  background-color: #2563eb;
+}
+
+/* 다크 모드 스타일 */
+body.dark-mode {
+  background-color: #18191a;
+  color: #e4e6ea;
+}
+
+body.dark-mode .app {
+  background-color: #18191a;
+}
+
+body.dark-mode .main-content {
+  background-color: #18191a;
+}
+
+body.dark-mode .calendar-container {
+  background-color: #242526;
+}
+
+body.dark-mode .calendar-header {
+  background-color: #242526;
+  color: #e4e6ea;
+}
+
+body.dark-mode .calendar-header h2 {
+  color: #e4e6ea;
+}
+
+body.dark-mode .nav-arrow {
+  color: #b0b3b8;
+}
+
+body.dark-mode .nav-arrow:hover {
+  color: #4CAF50;
+}
+
+body.dark-mode .calendar-day {
+  background-color: #242526;
+  color: #e4e6ea;
+  border: 0.5px solid #3a3b3c;
+}
+
+body.dark-mode .calendar-day:hover {
+  background-color: #3a3b3c;
+}
+
+body.dark-mode .calendar-day.today {
+  font-weight: bold;
+}
+
+body.dark-mode .calendar-day.today .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+body.dark-mode .calendar-day.today-unselected .day-number {
+  background-color: #2196F3;
+}
+
+body.dark-mode .calendar-day.selected {
+  font-weight: bold;
+}
+
+body.dark-mode .calendar-day.selected .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+body.dark-mode .calendar-day.today.selected {
+  font-weight: bold;
+}
+
+body.dark-mode .calendar-day.today.selected .day-number {
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+body.dark-mode .calendar-day.other-month {
+  color: #5a5b5c;
+}
+
+body.dark-mode .day-header {
+  color: #b0b3b8;
+}
+
+body.dark-mode .daily-view {
+  background-color: #18191a;
+}
+
+body.dark-mode .daily-timeline-section {
+  background-color: #18191a;
+}
+
+body.dark-mode .daily-header {
+  background-color: #18191a;
+  color: #e4e6ea;
+}
+
+body.dark-mode .daily-header h2 {
+  color: #e4e6ea;
+}
+
+body.dark-mode .daily-total {
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.2);
+}
+
+body.dark-mode .hourly-timeline {
+  background-color: #242526;
+}
+
+body.dark-mode .time-block {
+  border-bottom: 1px solid #3a3b3c;
+}
+
+body.dark-mode .time-label {
+  color: #b0b3b8;
+  border-right: 1px solid #3a3b3c;
+}
+
+body.dark-mode .activity-title {
+  color: #ff3b30;
+  background: rgba(36, 37, 38, 0.9);
+}
+
+body.dark-mode .current-time-text {
+  color: #ff3b30;
+  background: #242526;
+  border: 1px solid #ff3b30;
+}
+
+body.dark-mode .stats-container {
+  background-color: #18191a;
+}
+
+body.dark-mode .stat-card {
+  background-color: #242526;
+  color: #e4e6ea;
+}
+
+body.dark-mode .stat-card h3 {
+  color: #b0b3b8;
+}
+
+body.dark-mode .stat-value {
+  color: #4CAF50;
+}
+
+body.dark-mode .stat-date {
+  color: #8a8d91;
+}
+
+body.dark-mode .bottom-nav {
+  background-color: #242526;
+  border-top: 1px solid #3a3b3c;
+}
+
+body.dark-mode .nav-item {
+  color: #9ca3af;
+}
+
+body.dark-mode .nav-item.active .nav-icon {
+  color: #4CAF50;
+}
+
+body.dark-mode .nav-item.active .nav-label {
+  color: #4CAF50;
+}
+
+body.dark-mode .nav-label {
+  color: #9ca3af;
+}
+
+body.dark-mode .floating-timer {
+  background: rgba(36, 37, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .floating-timer-btn {
+  color: #e4e6ea;
+}
+
+body.dark-mode .floating-timer-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .floating-timer-display {
+  color: #e4e6ea;
+}
+
+body.dark-mode .floating-timer .total-timer {
+  color: #b0b3b8;
+}
+
+body.dark-mode .time-input-modal {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .modal-content {
+  background: #242526;
+}
+
+body.dark-mode .modal-header {
+  border-bottom: 1px solid #3a3b3c;
+}
+
+body.dark-mode .modal-header h3 {
+  color: #e4e6ea;
+}
+
+body.dark-mode .modal-close {
+  color: #b0b3b8;
+}
+
+body.dark-mode .modal-close:hover {
+  background: #3a3b3c;
+  color: #e4e6ea;
+}
+
+body.dark-mode .time-input-group label {
+  color: #e4e6ea;
+}
+
+body.dark-mode .time-input-group input[type="time"] {
+  background: #3a3b3c;
+  border: 2px solid #4e4f50;
+  color: #e4e6ea;
+}
+
+body.dark-mode .time-input-group input[type="time"]:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+body.dark-mode .btn-cancel {
+  background: #3a3b3c;
+  color: #b0b3b8;
+}
+
+body.dark-mode .btn-cancel:hover {
+  background: #4e4f50;
+  color: #e4e6ea;
+}
+
+body.dark-mode .settings-container {
+  background: #0f172a;
+}
+
+body.dark-mode .settings-header {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+body.dark-mode .setting-group {
+  background: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .group-header {
+  background: #334155;
+  border-bottom: 1px solid #475569;
+}
+
+body.dark-mode .group-icon {
+  background: #1e40af;
+  color: #dbeafe;
+}
+
+.dark-mode .group-icon svg {
+  stroke: #dbeafe;
+}
+
+body.dark-mode .group-info h3 {
+  color: #f1f5f9;
+}
+
+body.dark-mode .group-info p {
+  color: #94a3b8;
+}
+
+body.dark-mode .setting-row {
+  border-bottom: 1px solid #334155;
+}
+
+body.dark-mode .setting-title {
+  color: #f1f5f9;
+}
+
+body.dark-mode .setting-desc {
+  color: #94a3b8;
+}
+
+body.dark-mode .setting-select {
+  background: #334155;
+  border: 1px solid #475569;
+  color: #f1f5f9;
+}
+
+body.dark-mode .setting-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+body.dark-mode .setting-action {
+  border-bottom: 1px solid #334155;
+}
+
+body.dark-mode .setting-action.danger {
+  background: #450a0a;
+}
+
+body.dark-mode .action-title {
+  color: #f1f5f9;
+}
+
+body.dark-mode .action-desc {
+  color: #94a3b8;
+}
+
+body.dark-mode .action-btn.secondary {
+  background: #334155;
+  color: #f1f5f9;
+  border: 1px solid #475569;
+}
+
+body.dark-mode .action-btn.secondary:hover {
+  background: #475569;
+  border-color: #64748b;
+}
+
+body.dark-mode .toggle-slider {
+  background-color: #4b5563;
+}
+
+body.dark-mode .toggle-slider:hover {
+  background-color: #6b7280;
+}
+
+body.dark-mode input:checked + .toggle-slider {
+  background-color: #3b82f6;
+}
+
+body.dark-mode input:checked + .toggle-slider:hover {
+  background-color: #2563eb;
+}
+
+body.dark-mode .logout-btn-settings {
+  background: #ef4444;
+  color: white;
+}
+
+body.dark-mode .logout-btn-settings:hover {
+  background: #dc2626;
+}
+
+body.dark-mode .primary-icon {
+  opacity: 1;
+  color: #10b981;
+}
+
+body.dark-mode .secondary-icon {
+  opacity: 0.6;
+  color: #9ca3af;
+}
+
+body.dark-mode .icon-separator {
+  opacity: 0.7;
+}
+
+body.dark-mode .nav-item.active .primary-icon {
+  opacity: 1;
+  color: #10b981;
+}
+
+body.dark-mode .nav-item.active .secondary-icon {
+  opacity: 0.6;
+  color: #9ca3af;
+}
+
+body.dark-mode .nav-item:hover .secondary-icon {
+  opacity: 0.8;
+  color: #d1d5db;
+}
