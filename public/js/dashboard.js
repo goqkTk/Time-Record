@@ -135,7 +135,7 @@ pauseBtn.onclick = () => {
   resetTimer();
   updateTotalTimer();
   
-  // 버튼 상태 변경 (재시작 아이콘으로 변경)
+  // 버튼 상태 변경 (재시작 ��이콘으로 변경)
   startBtn.innerHTML = '⏯';
   startBtn.style.display = 'flex';
   pauseBtn.style.display = 'none';
@@ -664,21 +664,16 @@ function initNavigation() {
         const navLabel = timeCalendarToggle.querySelector('.nav-label');
         
         // 모든 아이콘과 텍스트를 회색으로 설정
-        navLabel.innerHTML = '<span style="color: #6b7280;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
+        navLabel.textContent = '시간 / 달력';
         
-        navIcon.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12,6 12,12 16,14"></polyline>
-          </svg>
-          <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        `;
+        const timeSvg = navIcon.querySelector('.time-icon');
+        const calSvg = navIcon.querySelector('.calendar-icon');
+        const sep = navIcon.querySelector('.icon-separator');
+        if (timeSvg && calSvg && sep) {
+          timeSvg.setAttribute('stroke', '#6b7280');
+          calSvg.setAttribute('stroke', '#6b7280');
+          sep.style.color = '#6b7280';
+        }
       }
 
       // 클릭된 아이템에 active 클래스 추가
@@ -704,21 +699,16 @@ function resetTimeCalendarToDefault(toggleBtn) {
   toggleBtn.dataset.view = 'time-view';
   
   // 시간만 선택된 상태로 표시 (시간: 초록색, 달력: 회색)
-  navLabel.innerHTML = '<span style="color: #10b981;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
+  navLabel.textContent = '시간 / 달력';
   
-  navIcon.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-      <circle cx="12" cy="12" r="10"></circle>
-      <polyline points="12,6 12,12 16,14"></polyline>
-    </svg>
-    <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="16" y1="2" x2="16" y2="6"></line>
-      <line x1="8" y1="2" x2="8" y2="6"></line>
-      <line x1="3" y1="10" x2="21" y2="10"></line>
-    </svg>
-  `;
+  const timeSvg = navIcon.querySelector('.time-icon');
+  const calSvg = navIcon.querySelector('.calendar-icon');
+  const sep = navIcon.querySelector('.icon-separator');
+  if (timeSvg && calSvg && sep) {
+    timeSvg.setAttribute('stroke', '#4CAF50');
+    calSvg.setAttribute('stroke', '#6b7280');
+    sep.style.color = '#6b7280';
+  }
 }
 
 // 시간/달력 토글 처리
@@ -728,58 +718,38 @@ function handleTimeCalendarToggle(toggleBtn) {
   const navLabel = toggleBtn.querySelector('.nav-label');
   const views = document.querySelectorAll('.view');
   
-  // 모든 뷰 숨기기
   views.forEach(view => view.classList.remove('active'));
   
   if (currentMode === 'time') {
-    // 시간 -> 달력으로 전환
     toggleBtn.dataset.mode = 'calendar';
     toggleBtn.dataset.view = 'calendar-view';
-    navLabel.innerHTML = '<span style="color: #6b7280;">시간</span><span style="color: #6b7280;">/</span><span style="color: #10b981;">달력</span>';
-    
-    // 달력 모드: 달력만 선택된 상태로 표시 (시간: 회색, 달력: 초록색)
-     navIcon.innerHTML = `
-       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-         <circle cx="12" cy="12" r="10"></circle>
-         <polyline points="12,6 12,12 16,14"></polyline>
-       </svg>
-       <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
-       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-         <line x1="16" y1="2" x2="16" y2="6"></line>
-         <line x1="8" y1="2" x2="8" y2="6"></line>
-         <line x1="3" y1="10" x2="21" y2="10"></line>
-       </svg>
-     `;
-    
-    // 달력 뷰 활성화
+    navLabel.textContent = '시간 / 달력';
+
+    const timeSvg = navIcon.querySelector('.time-icon');
+    const calSvg = navIcon.querySelector('.calendar-icon');
+    const sep = navIcon.querySelector('.icon-separator');
+    if (timeSvg && calSvg && sep) {
+      timeSvg.setAttribute('stroke', '#6b7280');
+      calSvg.setAttribute('stroke', '#4CAF50');
+      sep.style.color = '#6b7280';
+    }
+
     document.getElementById('calendar-view').classList.add('active');
   } else {
-    // 달력 -> 시간으로 전환
     toggleBtn.dataset.mode = 'time';
     toggleBtn.dataset.view = 'time-view';
-    navLabel.innerHTML = '<span style="color: #10b981;">시간</span><span style="color: #6b7280;">/</span><span style="color: #6b7280;">달력</span>';
-    
-    // 시간 모드: 시간만 선택된 상태로 표시 (시간: 초록색, 달력: 회색)
-     navIcon.innerHTML = `
-       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-         <circle cx="12" cy="12" r="10"></circle>
-         <polyline points="12,6 12,12 16,14"></polyline>
-       </svg>
-       <span class="icon-separator" style="color: #6b7280; margin: 0 4px;">/</span>
-       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-         <line x1="16" y1="2" x2="16" y2="6"></line>
-         <line x1="8" y1="2" x2="8" y2="6"></line>
-         <line x1="3" y1="10" x2="21" y2="10"></line>
-       </svg>
-     `;
-    
-    // 시간 뷰 활성화
+    navLabel.textContent = '시간 / 달력';
+
+    const timeSvg = navIcon.querySelector('.time-icon');
+    const calSvg = navIcon.querySelector('.calendar-icon');
+    const sep = navIcon.querySelector('.icon-separator');
+    if (timeSvg && calSvg && sep) {
+      timeSvg.setAttribute('stroke', '#4CAF50');
+      calSvg.setAttribute('stroke', '#6b7280');
+      sep.style.color = '#6b7280';
+    }
+
     document.getElementById('time-view').classList.add('active');
-    
-    // 시간 뷰로 전환할 때 타임라인 업데이트
-    updateCurrentTimeLine();
   }
 }
 
@@ -999,7 +969,7 @@ function initFloatingMenu() {
           startTime: startDateTime.toISOString(),
           endTime: endDateTime.toISOString(),
           duration: duration,
-          paused_intervals: []
+          pausedIntervals: []
         })
       });
       
