@@ -58,10 +58,28 @@ let currentEditingRecordId = null;
 // 유틸리티 함수들
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
-  const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const hours = Math.floor(totalSeconds / 3600);
   const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
   const s = String(totalSeconds % 60).padStart(2, '0');
-  return `${h}:${m}:${s}`;
+  
+  // 시간 형식 설정 적용
+  let timeFormatSetting = window.userSettings?.timeFormat;
+  if (!timeFormatSetting) {
+    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+    timeFormatSetting = localStorage.getItem('timeFormat') || '12';
+  }
+  
+  if (timeFormatSetting === '12') {
+    // 12시간제 형식
+    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const h = String(displayHour).padStart(2, '0');
+    const ampm = hours < 12 ? 'AM' : 'PM';
+    return `${h}:${m}:${s} ${ampm}`;
+  } else {
+    // 24시간제 형식
+    const h = String(hours).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
 }
 
 function formatDuration(ms) {
@@ -75,7 +93,22 @@ function formatDurationShort(ms) {
   const totalMinutes = Math.floor(ms / (1000 * 60));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  
+  // 시간 형식 설정 적용
+  let timeFormatSetting = window.userSettings?.timeFormat;
+  if (!timeFormatSetting) {
+    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+    timeFormatSetting = localStorage.getItem('timeFormat') || '12';
+  }
+  
+  if (timeFormatSetting === '12') {
+    // 12시간제 형식 (시간이 12를 넘어가면 표시 방식 변경)
+    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${displayHour}:${minutes.toString().padStart(2, '0')}`;
+  } else {
+    // 24시간제 형식
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  }
 }
 
 function isToday(date) {
@@ -239,8 +272,19 @@ function renderCalendar() {
   // 달력 그리드 초기화
   calendarGrid.innerHTML = '';
   
-  // 요일 헤더 추가
-  const dayHeaders = ['일', '월', '화', '수', '목', '금', '토'];
+  // 주간 시작일 설정 적용
+  let weekStartSetting = '0'; // 기본값: 일요일(0)
+  if (window.userSettings && window.userSettings.weekStart) {
+    weekStartSetting = window.userSettings.weekStart;
+  }
+  weekStartSetting = parseInt(weekStartSetting);
+  
+  // 요일 헤더 추가 (주간 시작일 설정에 따라 조정)
+  let dayHeaders = ['일', '월', '화', '수', '목', '금', '토'];
+  if (weekStartSetting === 1) { // 월요일부터 시작
+    dayHeaders = ['월', '화', '수', '목', '금', '토', '일'];
+  }
+  
   dayHeaders.forEach(day => {
     const dayEl = document.createElement('div');
     dayEl.className = 'day-header';
@@ -249,7 +293,12 @@ function renderCalendar() {
   });
   
   // 첫 번째 날의 요일 구하기
-  const firstDay = new Date(year, month, 1).getDay();
+  let firstDay = new Date(year, month, 1).getDay();
+  
+  // 주간 시작일이 월요일인 경우 요일 조정
+  if (weekStartSetting === 1) {
+    firstDay = firstDay === 0 ? 6 : firstDay - 1; // 일요일(0)은 6으로, 나머지는 -1
+  }
   
   // 이전 달의 마지막 날들 추가
   const prevMonth = new Date(year, month, 0);
@@ -284,7 +333,11 @@ function renderCalendar() {
       const totalDuration = dayRecords.reduce((sum, record) => sum + record.duration, 0);
       const timeDisplay = document.createElement('div');
       timeDisplay.className = 'day-time';
-      timeDisplay.textContent = formatDurationShort(totalDuration);
+      // daily total은 시간 형식 설정과 관계없이 항상 시간:분 형식으로 표시
+      const totalMinutes = Math.floor(totalDuration / (1000 * 60));
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      timeDisplay.textContent = `${hours}:${minutes.toString().padStart(2, '0')}`;
       dayEl.appendChild(timeDisplay);
       dayEl.classList.add('has-record');
     }
@@ -355,7 +408,11 @@ function renderDailyView() {
   });
   
   const dayTotal = dayRecords.reduce((sum, record) => sum + record.duration, 0);
-  dailyTotalEl.textContent = formatDurationShort(dayTotal);
+  // daily total은 시간 형식 설정과 관계없이 항상 시간:분 형식으로 표시
+  const totalMinutes = Math.floor(dayTotal / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  dailyTotalEl.textContent = `${hours}:${minutes.toString().padStart(2, '0')}`;
   
   // 분 단위 타임라인 생성 (24시간 * 60분 = 1440분)
   hourlyTimelineEl.innerHTML = '';
@@ -384,8 +441,23 @@ function renderDailyView() {
       currentTimeText.className = 'current-time-text';
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
-      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-       currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+      
+      // 시간 형식 설정 적용
+      let timeFormatSetting = window.userSettings?.timeFormat;
+      if (!timeFormatSetting) {
+        // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+        timeFormatSetting = localStorage.getItem('timeFormat') || '24';
+      }
+      
+      let displayHour;
+      if (timeFormatSetting === '12') {
+        displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+        const ampm = currentHour < 12 ? 'AM' : 'PM';
+        currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
+      } else {
+        displayHour = currentHour;
+        currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+      }
       currentTimeLine.appendChild(currentTimeText);
       
       timeBlock.appendChild(currentTimeLine);
@@ -394,11 +466,24 @@ function renderDailyView() {
     const timeLabel = document.createElement('div');
     timeLabel.className = 'time-label';
     
-    // AM/PM 형식으로 시간 표시
+    // 시간 형식 설정 적용
+    let timeFormatSetting = window.userSettings?.timeFormat;
+    if (!timeFormatSetting) {
+      // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+      timeFormatSetting = localStorage.getItem('timeFormat') || '12';
+    }
+    
+    // 시간 형식에 따라 시간 표시
     if (minute === 0) {
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      const ampm = hour < 12 ? 'AM' : 'PM';
-      timeLabel.textContent = `${displayHour} ${ampm}`;
+      let displayHour;
+      if (timeFormatSetting === '12') {
+        displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const ampm = hour < 12 ? 'AM' : 'PM';
+        timeLabel.textContent = `${displayHour} ${ampm}`;
+      } else {
+        displayHour = hour;
+        timeLabel.textContent = `${displayHour.toString().padStart(2, '0')}:00`;
+      }
     } else {
       timeLabel.textContent = '';
     }
@@ -671,7 +756,8 @@ function openActivityEditModal(recordId, startTime, duration) {
   const startDate = new Date(startTime);
   const endDate = new Date(startDate.getTime() + parseInt(duration));
   
-  // 시간 입력 필드에 값 설정
+  // 시간 입력 필드에 값 설정 (항상 24시간제로 표시)
+  // 시간 입력은 내부적으로 24시간제로 처리하기 위해 형식 설정과 관계없이 24시간제로 표시
   const startHours = startDate.getHours().toString().padStart(2, '0');
   const startMinutes = startDate.getMinutes().toString().padStart(2, '0');
   editStartTimeInput.value = `${startHours}:${startMinutes}`;
@@ -974,8 +1060,25 @@ function updateCurrentTimeLine() {
     currentTimeText.className = 'current-time-text';
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-    currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+    
+    // 시간 형식 설정 적용
+    let timeFormatSetting = window.userSettings?.timeFormat;
+    if (!timeFormatSetting) {
+      // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+      timeFormatSetting = localStorage.getItem('timeFormat') || '24';
+    }
+    
+    if (timeFormatSetting === '12') {
+      // 12시간제 형식
+      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+      const ampm = currentHour < 12 ? 'AM' : 'PM';
+      currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
+    } else {
+      // 24시간제 형식
+      const displayHour = currentHour;
+      currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+    }
+    
     currentTimeLine.appendChild(currentTimeText);
     
     timeBlock.appendChild(currentTimeLine);
@@ -997,8 +1100,23 @@ function startRealTimeUpdate() {
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
-      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-      currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')}`;
+      
+      // 시간 형식 설정 적용
+      let timeFormatSetting = '12'; // 기본값을 12시간제로 변경
+      if (window.userSettings && window.userSettings.timeFormat) {
+        timeFormatSetting = window.userSettings.timeFormat;
+      }
+      
+      if (timeFormatSetting === '12') {
+        // 12시간제 형식
+        const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
+        const ampm = currentHour < 12 ? 'AM' : 'PM';
+        currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
+      } else {
+        // 24시간제 형식
+        const displayHour = currentHour;
+        currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+      }
     }
   }, 1000); // 1초마다 업데이트
 }
@@ -1186,13 +1304,17 @@ async function loadUserSettings() {
     const response = await fetch('/api/settings');
     if (response.ok) {
       const settings = await response.json();
+      // 전역 변수에 설정 저장하여 다른 함수에서 접근 가능하게 함
+      window.userSettings = settings;
       return settings;
     } else {
       console.error('설정 로드 실패:', response.status);
+      window.userSettings = {};
       return {};
     }
   } catch (error) {
     console.error('설정 로드 오류:', error);
+    window.userSettings = {};
     return {};
   }
 }
@@ -1211,7 +1333,13 @@ async function saveUserSetting(settingKey, settingValue) {
       })
     });
     
-    if (!response.ok) {
+    if (response.ok) {
+      // 전역 설정 객체에도 즉시 반영
+      if (!window.userSettings) {
+        window.userSettings = {};
+      }
+      window.userSettings[settingKey] = settingValue;
+    } else {
       console.error('설정 저장 실패:', response.status);
     }
   } catch (error) {
@@ -1251,10 +1379,13 @@ async function initAdditionalSettings() {
   const settings = await loadUserSettings();
   
   // 시간 형식 설정
-  const timeFormat = settings.timeFormat || '24';
+  // 서버 설정, localStorage, 기본값 순으로 확인
+  const timeFormat = settings.timeFormat || localStorage.getItem('timeFormat') || '12';
   timeFormatSelect.value = timeFormat;
   timeFormatSelect.addEventListener('change', async () => {
     await saveUserSetting('timeFormat', timeFormatSelect.value);
+    // localStorage에도 저장하여 새로고침 시 설정 유지
+    localStorage.setItem('timeFormat', timeFormatSelect.value);
     // 시간 표시 업데이트
     updateTimeDisplay();
   });

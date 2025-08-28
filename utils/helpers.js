@@ -10,6 +10,7 @@ function formatTime(ms) {
   const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
   const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
   const s = String(totalSeconds % 60).padStart(2, '0');
+  // 서버 측에서는 항상 24시간제로 표시
   return `${h}:${m}:${s}`;
 }
 
