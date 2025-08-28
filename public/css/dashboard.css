@@ -611,7 +611,7 @@ body {
 
 .time-block {
   display: flex;
-  min-height: 30px;
+  min-height: 60px;
   border-bottom: 1px solid #f1f3f4;
   position: relative;
 }
@@ -1246,6 +1246,7 @@ body.dark-mode .hourly-timeline {
 
 body.dark-mode .time-block {
   border-bottom: 1px solid #3a3b3c;
+  min-height: 60px;
 }
 
 body.dark-mode .time-label {

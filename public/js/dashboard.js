@@ -364,19 +364,19 @@ function renderDailyView() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   
-  // 30분 간격으로 표시 (48개 블록)
-  for (let minutes = 0; minutes < 1440; minutes += 30) {
+  // 1시간 간격으로 표시 (24개 블록)
+  for (let minutes = 0; minutes < 1440; minutes += 60) {
     const hour = Math.floor(minutes / 60);
     const minute = minutes % 60;
     
     const timeBlock = document.createElement('div');
     timeBlock.className = 'time-block';
     
-    // 현재 시간 표시선
-    if (minutes <= currentMinutes && currentMinutes < minutes + 30) {
+    // 현재 시간 표시선 (1시간 블록에서 표시)
+    if (minutes <= currentMinutes && currentMinutes < minutes + 60) {
       const currentTimeLine = document.createElement('div');
       currentTimeLine.className = 'current-time-line';
-      const currentTimeOffset = ((currentMinutes - minutes) / 30) * 100;
+      const currentTimeOffset = ((currentMinutes - minutes) / 60) * 100;
       currentTimeLine.style.top = `${currentTimeOffset}%`;
       
       // 현재 시간 텍스트 추가
@@ -413,7 +413,7 @@ function renderDailyView() {
       const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
       const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
       
-      return recordStartMinutes < minutes + 30 && recordEndMinutes > minutes;
+      return recordStartMinutes < minutes + 60 && recordEndMinutes > minutes;
     });
     
     // 현재 진행 중인 세션 확인 (오늘 날짜일 때만)
@@ -425,7 +425,7 @@ function renderDailyView() {
       const sessionStartMinutes = sessionStart.getHours() * 60 + sessionStart.getMinutes();
       const sessionEndMinutes = sessionEnd.getHours() * 60 + sessionEnd.getMinutes();
       
-      if (sessionStartMinutes < minutes + 30 && sessionEndMinutes > minutes) {
+      if (sessionStartMinutes < minutes + 60 && sessionEndMinutes > minutes) {
         currentSessionRecord = {
         start_time: sessionStart.toISOString(),
         duration: totalElapsed + elapsed,
@@ -924,7 +924,7 @@ function handleTimeCalendarToggle(toggleBtn) {
 function scrollToCurrentTime() {
   const currentTime = new Date();
   const scrollCurrentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const currentBlockIndex = Math.floor(scrollCurrentMinutes / 30);
+  const currentBlockIndex = Math.floor(scrollCurrentMinutes / 60);
   
   if (!hourlyTimelineEl) {
     console.log('타임라인 요소를 찾을 수 없습니다.');
@@ -955,18 +955,18 @@ function updateCurrentTimeLine() {
   const existingLines = document.querySelectorAll('.current-time-line');
   existingLines.forEach(line => line.remove());
   
-  // 현재 시간이 속한 30분 블록 찾기
-  const currentBlockIndex = Math.floor(currentMinutes / 30);
+  // 현재 시간이 속한 60분 블록 찾기
+  const currentBlockIndex = Math.floor(currentMinutes / 60);
   const timeBlocks = document.querySelectorAll('.time-block');
   
   if (timeBlocks[currentBlockIndex]) {
     const timeBlock = timeBlocks[currentBlockIndex];
-    const blockStartMinutes = currentBlockIndex * 30;
+    const blockStartMinutes = currentBlockIndex * 60;
     
     // 현재 시간 표시선 생성
     const currentTimeLine = document.createElement('div');
     currentTimeLine.className = 'current-time-line';
-    const currentTimeOffset = ((currentMinutes - blockStartMinutes) / 30) * 100;
+    const currentTimeOffset = ((currentMinutes - blockStartMinutes) / 60) * 100;
     currentTimeLine.style.top = `${currentTimeOffset}%`;
     
     // 현재 시간 텍스트 추가
