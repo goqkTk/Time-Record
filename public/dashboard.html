@@ -87,6 +87,30 @@
             </div>
           </div>
           
+          <!-- 활동바 수정/삭제 모달 -->
+          <div class="activity-edit-modal" id="activityEditModal">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>활동 시간 관리</h3>
+                <button class="modal-close" id="activityModalClose">×</button>
+              </div>
+              <div class="modal-body">
+                <div class="time-input-group">
+                  <label>시작 시간</label>
+                  <input type="time" id="editStartTimeInput" />
+                </div>
+                <div class="time-input-group">
+                  <label>종료 시간</label>
+                  <input type="time" id="editEndTimeInput" />
+                </div>
+                <div class="modal-actions">
+                  <button class="btn-delete" id="deleteActivityBtn">삭제</button>
+                  <button class="btn-save" id="saveEditBtn">저장</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- 일간뷰 섹션 -->
           <div class="daily-timeline-section full-height">
             <div class="daily-header">

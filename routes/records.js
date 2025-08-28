@@ -51,6 +51,60 @@ router.get('/', requireAuth, (req, res) => {
   });
 });
 
+// 기록 수정 API
+router.put('/:id', requireAuth, (req, res) => {
+  const recordId = req.params.id;
+  const userId = req.session.userId;
+  const { startTime, endTime, duration } = req.body;
+  
+  if (!startTime || !endTime || !duration) {
+    return res.status(400).json({ error: '필수 값 누락' });
+  }
+  
+  const db = req.app.get('db');
+  
+  // 먼저 해당 레코드가 현재 사용자의 것인지 확인
+  db.get('SELECT * FROM records WHERE id = ? AND user_id = ?', [recordId, userId], (err, row) => {
+    if (err) return res.status(500).json({ error: 'DB 오류' });
+    if (!row) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
+    
+    // 레코드 업데이트
+    db.run(
+      'UPDATE records SET start_time = ?, end_time = ?, duration = ? WHERE id = ? AND user_id = ?',
+      [startTime, endTime, duration, recordId, userId],
+      function(err) {
+        if (err) return res.status(500).json({ error: 'DB 오류' });
+        if (this.changes === 0) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
+        res.json({ success: true });
+      }
+    );
+  });
+});
+
+// 기록 삭제 API
+router.delete('/:id', requireAuth, (req, res) => {
+  const recordId = req.params.id;
+  const userId = req.session.userId;
+  const db = req.app.get('db');
+  
+  // 먼저 해당 레코드가 현재 사용자의 것인지 확인
+  db.get('SELECT * FROM records WHERE id = ? AND user_id = ?', [recordId, userId], (err, row) => {
+    if (err) return res.status(500).json({ error: 'DB 오류' });
+    if (!row) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
+    
+    // 레코드 삭제
+    db.run(
+      'DELETE FROM records WHERE id = ? AND user_id = ?',
+      [recordId, userId],
+      function(err) {
+        if (err) return res.status(500).json({ error: 'DB 오류' });
+        if (this.changes === 0) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
+        res.json({ success: true });
+      }
+    );
+  });
+});
+
 
 
 module.exports = router;

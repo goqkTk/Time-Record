@@ -41,6 +41,20 @@ const exportDataBtn = document.getElementById('exportDataBtn');
 const importDataBtn = document.getElementById('importDataBtn');
 const importDataInput = document.getElementById('importDataInput');
 
+// 활동바 수정/삭제 모달 요소들
+const activityEditModal = document.getElementById('activityEditModal');
+const activityModalClose = document.getElementById('activityModalClose');
+const editStartTimeInput = document.getElementById('editStartTimeInput');
+const editEndTimeInput = document.getElementById('editEndTimeInput');
+const deleteActivityBtn = document.getElementById('deleteActivityBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const saveEditBtn = document.getElementById('saveEditBtn');
+
+
+
+// 현재 수정 중인 활동 레코드 ID
+let currentEditingRecordId = null;
+
 // 유틸리티 함수들
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -437,6 +451,20 @@ function renderDailyView() {
         const activityBar = document.createElement('div');
         activityBar.className = 'activity-bar-vertical';
         
+        // 레코드 ID 설정
+        const recordId = record.id || record._id;
+        
+        // 활동바에 레코드 ID 저장
+        activityBar.dataset.recordId = recordId;
+        activityBar.dataset.startTime = record.start_time;
+        activityBar.dataset.duration = record.duration;
+        
+        // 활동바 클릭 이벤트 추가
+        activityBar.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openActivityEditModal(recordId, record.start_time, record.duration);
+        });
+        
         // 활동 바의 위치와 높이 계산
         const startOffset = Math.max(0, recordStartMinutes - minutes);
         const endOffset = Math.min(30, recordEndMinutes - minutes);
@@ -508,6 +536,19 @@ function renderDailyView() {
             if (segment.start < minutes + 30 && segment.end > minutes) {
               const segmentBar = document.createElement('div');
               segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
+              
+              // 활성 세그먼트에만 클릭 이벤트 추가
+              if (segment.type === 'active') {
+                const recordId = record.id || record._id;
+                segmentBar.dataset.recordId = recordId;
+                segmentBar.dataset.startTime = record.start_time;
+                segmentBar.dataset.duration = record.duration;
+                
+                segmentBar.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  openActivityEditModal(recordId, record.start_time, record.duration);
+                });
+              }
               
               const segmentStartOffset = Math.max(0, segment.start - minutes);
               const segmentEndOffset = Math.min(30, segment.end - minutes);
@@ -614,14 +655,138 @@ async function loadRecords() {
     });
     if (response.ok) {
       records = await response.json();
-      console.log('기록 로드 완료:', records.length + '개');
     } else {
-      console.error('기록 로드 실패:', response.status);
       records = [];
     }
   } catch (error) {
-    console.error('기록 로드 실패:', error);
     records = [];
+  }
+}
+
+// 활동바 수정 모달 열기
+function openActivityEditModal(recordId, startTime, duration) {
+  currentEditingRecordId = recordId;
+  
+  // 시작 시간과 종료 시간 계산
+  const startDate = new Date(startTime);
+  const endDate = new Date(startDate.getTime() + parseInt(duration));
+  
+  // 시간 입력 필드에 값 설정
+  const startHours = startDate.getHours().toString().padStart(2, '0');
+  const startMinutes = startDate.getMinutes().toString().padStart(2, '0');
+  editStartTimeInput.value = `${startHours}:${startMinutes}`;
+  
+  const endHours = endDate.getHours().toString().padStart(2, '0');
+  const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+  editEndTimeInput.value = `${endHours}:${endMinutes}`;
+  
+  // 모달 표시
+  activityEditModal.style.display = 'flex';
+  activityEditModal.style.opacity = '1';
+  activityEditModal.style.visibility = 'visible';
+}
+
+
+
+
+
+// 활동바 수정 모달 닫기
+function closeActivityEditModal() {
+  activityEditModal.style.display = 'none';
+  activityEditModal.style.opacity = '0';
+  activityEditModal.style.visibility = 'hidden';
+  currentEditingRecordId = null;
+}
+
+// 활동 시간 수정
+async function updateActivity() {
+  if (!currentEditingRecordId) {
+    return;
+  }
+  
+  // 선택된 날짜 가져오기 (selectedDate가 없으면 오늘 날짜 사용)
+  const baseDate = selectedDate || new Date();
+  
+  // 시작 시간과 종료 시간 파싱
+  const [startHours, startMinutes] = editStartTimeInput.value.split(':').map(Number);
+  const [endHours, endMinutes] = editEndTimeInput.value.split(':').map(Number);
+  
+  // 시작 시간과 종료 시간 설정
+  const startTime = new Date(baseDate);
+  startTime.setHours(startHours, startMinutes, 0, 0);
+  
+  const endTime = new Date(baseDate);
+  endTime.setHours(endHours, endMinutes, 0, 0);
+  
+  // 종료 시간이 시작 시간보다 이전인 경우 다음 날로 설정
+  if (endTime < startTime) {
+    endTime.setDate(endTime.getDate() + 1);
+  }
+  
+  // 활동 시간 계산 (밀리초)
+  const duration = endTime.getTime() - startTime.getTime();
+  
+  try {
+    // 서버에 업데이트 요청
+    const response = await fetch(`/api/records/${currentEditingRecordId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        duration: duration
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('활동 시간 수정에 실패했습니다.');
+    }
+    
+    // 데이터 다시 로드 및 화면 갱신
+    await loadRecords();
+    renderDailyView();
+    renderCalendar();
+    updateStats();
+    
+    // 모달 닫기
+    closeActivityEditModal();
+  } catch (error) {
+    console.error('활동 시간 수정 실패:', error);
+    alert('활동 시간 수정에 실패했습니다.');
+  }
+}
+
+// 활동 삭제
+async function deleteActivity() {
+  if (!currentEditingRecordId) {
+    return;
+  }
+  
+  if (!confirm('이 활동을 삭제하시겠습니까?')) {
+    return;
+  }
+  
+  try {
+    // 서버에 삭제 요청
+    const response = await fetch(`/api/records/${currentEditingRecordId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error('활동 삭제에 실패했습니다.');
+    }
+    
+    // 데이터 다시 로드 및 화면 갱신
+    await loadRecords();
+    renderDailyView();
+    renderCalendar();
+    updateStats();
+    
+    // 모달 닫기
+    closeActivityEditModal();
+  } catch (error) {
+    console.error('활동 삭제 실패:', error);
+    alert('활동 삭제에 실패했습니다.');
   }
 }
 
@@ -889,6 +1054,33 @@ function initFloatingMenu() {
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
   
+  // 활동바 수정 모달 이벤트 리스너 초기화
+  console.log('활동 수정 모달 이벤트 리스너 초기화');
+  console.log('DOM 요소 확인:', {
+    activityModalClose: activityModalClose,
+    saveEditBtn: saveEditBtn,
+    deleteActivityBtn: deleteActivityBtn
+  });
+  
+  activityModalClose.addEventListener('click', function() {
+    closeActivityEditModal();
+  });
+  
+  saveEditBtn.addEventListener('click', function() {
+    updateActivity();
+  });
+  
+  deleteActivityBtn.addEventListener('click', function() {
+    deleteActivity();
+  });
+  
+  // 활동 수정 모달 배경 클릭 시 닫기
+  activityEditModal.addEventListener('click', (e) => {
+    if (e.target === activityEditModal) {
+      closeActivityEditModal();
+    }
+  });
+  
   let isMenuOpen = false;
   
   // 메뉴 토글
@@ -974,7 +1166,6 @@ function initFloatingMenu() {
       });
       
       if (response.ok) {
-        console.log('시간 기록이 저장되었습니다.');
         await loadRecords();
         renderDailyView();
         updateStats();
