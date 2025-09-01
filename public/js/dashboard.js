@@ -429,8 +429,11 @@ function renderDailyView() {
     const timeBlock = document.createElement('div');
     timeBlock.className = 'time-block';
     
-    // 현재 시간 표시선 (1시간 블록에서 표시)
-    if (minutes <= currentMinutes && currentMinutes < minutes + 60) {
+    // 현재 시간 표시선 (1시간 블록에서 표시) - 오늘 날짜일 때만 표시
+    const today = new Date();
+    const isToday = displayDate.toDateString() === today.toDateString();
+    
+    if (isToday && minutes <= currentMinutes && currentMinutes < minutes + 60) {
       const currentTimeLine = document.createElement('div');
       currentTimeLine.className = 'current-time-line';
       const currentTimeOffset = ((currentMinutes - minutes) / 60) * 100;
@@ -1040,6 +1043,13 @@ function updateCurrentTimeLine() {
   // 기존 현재 시간 표시선 제거
   const existingLines = document.querySelectorAll('.current-time-line');
   existingLines.forEach(line => line.remove());
+  
+  // 선택된 날짜가 오늘이 아니면 현재 시간 표시선을 표시하지 않음
+  const today = new Date();
+  const displayDate = selectedDate || today;
+  if (displayDate.toDateString() !== today.toDateString()) {
+    return; // 오늘 날짜가 아니면 함수 종료
+  }
   
   // 현재 시간이 속한 60분 블록 찾기
   const currentBlockIndex = Math.floor(currentMinutes / 60);
