@@ -495,14 +495,8 @@ function renderDailyView() {
     activityArea.className = 'activity-area';
     
     // 해당 시간대의 활동 찾기 (저장된 기록)
-    const timeRecords = dayRecords.filter(record => {
-      const recordStart = new Date(record.start_time);
-      const recordEnd = new Date(recordStart.getTime() + record.duration);
-      const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
-      const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
-      
-      return recordStartMinutes < minutes + 60 && recordEndMinutes > minutes;
-    });
+    // 전체 타임라인에 대한 활동 기록을 가져옴 (필터링하지 않음)
+    const timeRecords = dayRecords;
     
     // 현재 진행 중인 세션 확인 (오늘 날짜일 때만)
     let currentSessionRecord = null;
@@ -510,16 +504,13 @@ function renderDailyView() {
     if (isDisplayingToday && sessionStartTime && (totalElapsed > 0 || elapsed > 0)) {
       const sessionStart = new Date(sessionStartTime);
       const sessionEnd = new Date();
-      const sessionStartMinutes = sessionStart.getHours() * 60 + sessionStart.getMinutes();
-      const sessionEndMinutes = sessionEnd.getHours() * 60 + sessionEnd.getMinutes();
       
-      if (sessionStartMinutes < minutes + 60 && sessionEndMinutes > minutes) {
-        currentSessionRecord = {
+      // 현재 세션을 항상 포함
+      currentSessionRecord = {
         start_time: sessionStart.toISOString(),
         duration: totalElapsed + elapsed,
         paused_intervals: pausedIntervals
       };
-      }
     }
     
     // 모든 활동 기록 (저장된 기록 + 현재 세션)
@@ -528,12 +519,41 @@ function renderDailyView() {
       allRecords.push(currentSessionRecord);
     }
     
-    if (allRecords.length > 0) {
-      allRecords.forEach(record => {
+    // 현재 시간 블록에 해당하는 활동만 필터링
+    const blockRecords = allRecords.filter(record => {
+      const recordStart = new Date(record.start_time);
+      const recordEnd = new Date(recordStart.getTime() + record.duration);
+      const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
+      const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+      
+      return recordStartMinutes < minutes + 60 && recordEndMinutes > minutes;
+    });
+    
+    if (blockRecords.length > 0) {
+      blockRecords.forEach(record => {
         const recordStart = new Date(record.start_time);
         const recordEnd = new Date(recordStart.getTime() + record.duration);
-        const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
-        const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+        
+        // 날짜 비교를 위해 표시 날짜와 기록 시작/종료 날짜 가져오기
+        const displayDateStr = displayDate.toDateString();
+        const recordStartDateStr = recordStart.toDateString();
+        const recordEndDateStr = recordEnd.toDateString();
+        
+        // 시작 시간과 종료 시간의 분 계산
+        let recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
+        let recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+        
+        // 날짜가 다른 경우 처리 (자정을 넘어가는 경우)
+        if (recordStartDateStr !== recordEndDateStr) {
+          // 표시 날짜가 시작 날짜와 같으면 종료 시간을 23:59로 설정
+          if (displayDateStr === recordStartDateStr) {
+            recordEndMinutes = 24 * 60 - 1; // 23:59
+          }
+          // 표시 날짜가 종료 날짜와 같으면 시작 시간을 00:00으로 설정
+          else if (displayDateStr === recordEndDateStr) {
+            recordStartMinutes = 0; // 00:00
+          }
+        }
         
         // 활동 바 생성 (실제 작업 시간)
         const activityBar = document.createElement('div');
@@ -553,17 +573,40 @@ function renderDailyView() {
           openActivityEditModal(recordId, record.start_time, record.duration);
         });
         
-        // 활동 바의 위치와 높이 계산
+        // 활동 바의 위치와 높이 계산 - 분 단위로 정확하게 계산
+        // 현재 시간 블록 내에서의 상대적 위치 계산
         const startOffset = Math.max(0, recordStartMinutes - minutes);
-        const endOffset = Math.min(30, recordEndMinutes - minutes);
-        const height = ((endOffset - startOffset) / 30) * 100;
-        const top = (startOffset / 30) * 100;
+        // 활동이 현재 시간 블록을 넘어가는 경우 처리
+        const endOffset = recordEndMinutes - minutes;
+        // 높이 계산 - 시간 블록을 넘어가는 경우 처리
+        const height = endOffset > 60 ? 100 : (endOffset / 60) * 100;
+        const top = (startOffset / 60) * 100;
         
-        activityBar.style.height = `${height}%`;
-        activityBar.style.top = `${top}%`;
+        // 소수점 2자리까지 정확하게 계산하여 위치 오차 최소화
+        // 높이를 약간 늘려서 활동바 사이의 1픽셀 간격 제거
+        activityBar.style.height = `calc(${height.toFixed(2)}% + 1px)`;
+        activityBar.style.top = `${top.toFixed(2)}%`;
+        
+        // 활동바가 시간 블록 경계를 넘어갈 수 있도록 position과 z-index 설정
+        activityBar.style.position = 'absolute';
+        activityBar.style.zIndex = '5';
+        activityBar.style.clipPath = 'none';
+        activityBar.style.overflow = 'visible';
+        
+        // 활동바 상단과 하단에 둥근 모서리 적용
+        // 활동바가 실제 활동의 시작 부분에 위치하면 상단 둥근 모서리 적용
+        // recordStartMinutes가 현재 시간 블록의 시작 시간과 같거나 이전 블록에서 넘어온 경우에만 적용
+        if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 60) {
+          activityBar.classList.add('activity-bar-top');
+        }
+        
+        // 활동바가 시간 블록의 끝 부분에 위치하거나 다음 블록으로 넘어가지 않으면 하단 둥근 모서리 적용
+        if (endOffset <= 60) {
+          activityBar.classList.add('activity-bar-bottom');
+        }
         
         // 활동 제목 표시 (첫 번째 블록에만)
-        if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 30) {
+        if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 60) {
           const activityTitle = document.createElement('div');
           activityTitle.className = 'activity-title';
           
@@ -597,8 +640,26 @@ function renderDailyView() {
             if (pausedInterval.start && pausedInterval.end) {
               const pauseStart = new Date(pausedInterval.start);
               const pauseEnd = new Date(pausedInterval.end);
-              const pauseStartMinutes = pauseStart.getHours() * 60 + pauseStart.getMinutes();
-              const pauseEndMinutes = pauseEnd.getHours() * 60 + pauseEnd.getMinutes();
+              
+              // 날짜 비교를 위해 표시 날짜와 일시정지 시작/종료 날짜 가져오기
+              const pauseStartDateStr = pauseStart.toDateString();
+              const pauseEndDateStr = pauseEnd.toDateString();
+              
+              // 시작 시간과 종료 시간의 분 계산
+              let pauseStartMinutes = pauseStart.getHours() * 60 + pauseStart.getMinutes();
+              let pauseEndMinutes = pauseEnd.getHours() * 60 + pauseEnd.getMinutes();
+              
+              // 날짜가 다른 경우 처리 (자정을 넘어가는 경우)
+              if (pauseStartDateStr !== pauseEndDateStr) {
+                // 표시 날짜가 시작 날짜와 같으면 종료 시간을 23:59로 설정
+                if (displayDateStr === pauseStartDateStr) {
+                  pauseEndMinutes = 24 * 60 - 1; // 23:59
+                }
+                // 표시 날짜가 종료 날짜와 같으면 시작 시간을 00:00으로 설정
+                else if (displayDateStr === pauseEndDateStr) {
+                  pauseStartMinutes = 0; // 00:00
+                }
+              }
               
               // 일시정지 전까지의 활동 세그먼트
               if (currentStart < pauseStartMinutes) {
@@ -621,56 +682,86 @@ function renderDailyView() {
           activityArea.removeChild(activityBar);
           
           segments.forEach(segment => {
-            if (segment.start < minutes + 30 && segment.end > minutes) {
-              const segmentBar = document.createElement('div');
-              segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
-              
-              // 활성 세그먼트에만 클릭 이벤트 추가
-              if (segment.type === 'active') {
-                const recordId = record.id || record._id;
-                segmentBar.dataset.recordId = recordId;
-                segmentBar.dataset.startTime = record.start_time;
-                segmentBar.dataset.duration = record.duration;
+            // 현재 시간 블록에 표시할 세그먼트인지 확인
+            if (segment.start < minutes + 60 && segment.end > minutes) {
+                const segmentBar = document.createElement('div');
+                segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
                 
-                segmentBar.addEventListener('click', function(e) {
-                  e.stopPropagation();
-                  openActivityEditModal(recordId, record.start_time, record.duration);
-                });
-              }
-              
-              const segmentStartOffset = Math.max(0, segment.start - minutes);
-              const segmentEndOffset = Math.min(30, segment.end - minutes);
-              const segmentHeight = ((segmentEndOffset - segmentStartOffset) / 30) * 100;
-              const segmentTop = (segmentStartOffset / 30) * 100;
-              
-              segmentBar.style.height = `${segmentHeight}%`;
-              segmentBar.style.top = `${segmentTop}%`;
-              
-              // 활동 제목은 첫 번째 활성 세그먼트에만 추가
-              if (segment.type === 'active' && segment.start >= minutes && segment.start < minutes + 30 && recordStartMinutes >= minutes && recordStartMinutes < minutes + 30) {
-                const activityTitle = document.createElement('div');
-                activityTitle.className = 'activity-title';
-                
-                // 활동 시간 계산 (밀리초를 분으로 변환)
-                const durationMinutes = Math.round(record.duration / (1000 * 60));
-                let timeText = '';
-                
-                if (durationMinutes >= 60) {
-                  const hours = Math.floor(durationMinutes / 60);
-                  const mins = durationMinutes % 60;
-                  timeText = mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
-                } else if (durationMinutes > 0) {
-                  timeText = `${durationMinutes}분`;
+                // 활성 세그먼트에만 클릭 이벤트 추가
+                if (segment.type === 'active') {
+                  const recordId = record.id || record._id;
+                  segmentBar.dataset.recordId = recordId;
+                  segmentBar.dataset.startTime = record.start_time;
+                  segmentBar.dataset.duration = record.duration;
+                  
+                  segmentBar.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openActivityEditModal(recordId, record.start_time, record.duration);
+                  });
                 }
                 
-                // 활동 시간이 있으면 텍스트 표시
-                if (timeText) {
-                  activityTitle.textContent = timeText;
-                  segmentBar.appendChild(activityTitle);
+                const segmentStartOffset = Math.max(0, segment.start - minutes);
+                // 세그먼트가 현재 시간 블록을 넘어가는 경우 처리
+                const segmentEndOffset = segment.end - minutes;
+                // 높이 계산 - 시간 블록을 넘어가는 경우 처리
+                const segmentHeight = segmentEndOffset > 60 ? 100 : (segmentEndOffset / 60) * 100;
+                const segmentTop = (segmentStartOffset / 60) * 100;
+                
+                // 높이를 약간 늘려서 활동바 사이의 1픽셀 간격 제거
+                segmentBar.style.height = `calc(${segmentHeight.toFixed(2)}% + 1px)`;
+                segmentBar.style.top = `${segmentTop.toFixed(2)}%`;
+                
+                // 세그먼트 바가 시간 블록 경계를 넘어갈 수 있도록 position과 z-index 설정
+                segmentBar.style.position = 'absolute';
+                segmentBar.style.zIndex = segment.type === 'paused' ? '4' : '5';
+                segmentBar.style.clipPath = 'none';
+                segmentBar.style.overflow = 'visible';
+                
+                // 세그먼트 바 상단과 하단에 둥근 모서리 적용
+                // 세그먼트 바가 실제 활동의 시작 부분에 위치하면 상단 둥근 모서리 적용
+                // 실제 활동의 시작 부분인 경우에만 상단 둥근 모서리 적용
+                if (segment.start === recordStartMinutes) {
+                  if (segment.type === 'paused') {
+                    segmentBar.classList.add('activity-bar-paused-top');
+                  } else {
+                    segmentBar.classList.add('activity-bar-top');
+                  }
                 }
-              }
-              
-              activityArea.appendChild(segmentBar);
+                
+                // 세그먼트 바가 시간 블록의 끝 부분에 위치하거나 다음 블록으로 넘어가지 않으면 하단 둥근 모서리 적용
+                if (segmentEndOffset <= 60) {
+                  if (segment.type === 'paused') {
+                    segmentBar.classList.add('activity-bar-paused-bottom');
+                  } else {
+                    segmentBar.classList.add('activity-bar-bottom');
+                  }
+                }
+                
+                // 활동 제목은 첫 번째 활성 세그먼트에만 추가
+                if (segment.type === 'active' && segment.start >= minutes && segment.start < minutes + 60 && recordStartMinutes >= minutes && recordStartMinutes < minutes + 60) {
+                  const activityTitle = document.createElement('div');
+                  activityTitle.className = 'activity-title';
+                  
+                  // 활동 시간 계산 (밀리초를 분으로 변환)
+                  const durationMinutes = Math.round(record.duration / (1000 * 60));
+                  let timeText = '';
+                  
+                  if (durationMinutes >= 60) {
+                    const hours = Math.floor(durationMinutes / 60);
+                    const mins = durationMinutes % 60;
+                    timeText = mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
+                  } else if (durationMinutes > 0) {
+                    timeText = `${durationMinutes}분`;
+                  }
+                  
+                  // 활동 시간이 있으면 텍스트 표시
+                  if (timeText) {
+                    activityTitle.textContent = timeText;
+                    segmentBar.appendChild(activityTitle);
+                  }
+                }
+                
+                activityArea.appendChild(segmentBar);
             }
           });
         }
@@ -743,6 +834,11 @@ async function loadRecords() {
     });
     if (response.ok) {
       records = await response.json();
+    } else if (response.status === 401) {
+      // 인증 오류 - 로그인 페이지로 리디렉션
+      alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+      window.location.href = '/login';
+      return;
     } else {
       records = [];
     }
@@ -827,7 +923,12 @@ async function updateActivity() {
       })
     });
     
-    if (!response.ok) {
+    if (response.status === 401) {
+      // 인증 오류 - 로그인 페이지로 리디렉션
+      alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+      window.location.href = '/login';
+      return;
+    } else if (!response.ok) {
       throw new Error('활동 시간 수정에 실패했습니다.');
     }
     
@@ -861,7 +962,12 @@ async function deleteActivity() {
       method: 'DELETE'
     });
     
-    if (!response.ok) {
+    if (response.status === 401) {
+      // 인증 오류 - 로그인 페이지로 리디렉션
+      alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+      window.location.href = '/login';
+      return;
+    } else if (!response.ok) {
       throw new Error('활동 삭제에 실패했습니다.');
     }
     
@@ -1276,7 +1382,15 @@ function initFloatingMenu() {
       
       // 시작 시간과 종료 시간을 Date 객체로 변환
       const startDateTime = new Date(`${dateStr}T${startTime}:00`);
-      const endDateTime = new Date(`${dateStr}T${endTime}:00`);
+      let endDateTime = new Date(`${dateStr}T${endTime}:00`);
+      
+      // 종료 시간이 시작 시간보다 이전인 경우 다음 날로 설정
+      if (endDateTime < startDateTime) {
+        const nextDay = new Date(targetDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDateStr = nextDay.toISOString().split('T')[0];
+        endDateTime = new Date(`${nextDateStr}T${endTime}:00`);
+      }
       
       const duration = endDateTime.getTime() - startDateTime.getTime();
       
@@ -1298,6 +1412,10 @@ function initFloatingMenu() {
         renderDailyView();
         updateStats();
         closeModal();
+      } else if (response.status === 401) {
+        // 인증 오류 - 로그인 페이지로 리디렉션
+        alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+        window.location.href = '/login';
       } else {
         throw new Error('저장 실패');
       }
