@@ -543,6 +543,11 @@ function renderDailyView() {
         let recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
         let recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
         
+        // 종료 시간이 자정(00:00)인 경우 처리
+        if (recordEnd.getHours() === 0 && recordEnd.getMinutes() === 0) {
+          recordEndMinutes = 24 * 60; // 24:00으로 설정
+        }
+        
         // 날짜가 다른 경우 처리 (자정을 넘어가는 경우)
         if (recordStartDateStr !== recordEndDateStr) {
           // 표시 날짜가 시작 날짜와 같으면 종료 시간을 23:59로 설정
@@ -579,7 +584,32 @@ function renderDailyView() {
         // 활동이 현재 시간 블록을 넘어가는 경우 처리
         const endOffset = recordEndMinutes - minutes;
         // 높이 계산 - 시간 블록을 넘어가는 경우 처리
-        const height = endOffset > 60 ? 100 : (endOffset / 60) * 100;
+        let height;
+        
+        // 현재 시간 블록이 시작 시간을 포함하는 경우
+        if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 60) {
+          // 현재 시간 블록이 종료 시간도 포함하는 경우
+          if (recordEndMinutes <= minutes + 60) {
+            // 시작과 종료가 모두 현재 블록 내에 있는 경우
+            height = ((recordEndMinutes - recordStartMinutes) / 60) * 100;
+          } else {
+            // 시작은 현재 블록, 종료는 다음 블록인 경우
+            height = ((minutes + 60 - recordStartMinutes) / 60) * 100;
+          }
+        }
+        // 현재 시간 블록이 종료 시간만 포함하는 경우
+        else if (recordEndMinutes > minutes && recordEndMinutes <= minutes + 60) {
+          height = (recordEndMinutes - minutes) / 60 * 100;
+        }
+        // 활동이 현재 블록을 완전히 포함하는 경우
+        else if (recordStartMinutes < minutes && recordEndMinutes > minutes + 60) {
+          height = 100; // 블록 전체 높이
+        }
+        // 그 외의 경우 (활동이 현재 블록과 겹치지 않음)
+        else {
+          height = 0;
+        }
+        
         const top = (startOffset / 60) * 100;
         
         // 소수점 2자리까지 정확하게 계산하여 위치 오차 최소화
@@ -594,14 +624,14 @@ function renderDailyView() {
         activityBar.style.overflow = 'visible';
         
         // 활동바 상단과 하단에 둥근 모서리 적용
-        // 활동바가 실제 활동의 시작 부분에 위치하면 상단 둥근 모서리 적용
-        // recordStartMinutes가 현재 시간 블록의 시작 시간과 같거나 이전 블록에서 넘어온 경우에만 적용
+        
+        // 현재 시간 블록이 활동의 시작 시간을 포함하는 경우 상단 둥근 모서리 적용
         if (recordStartMinutes >= minutes && recordStartMinutes < minutes + 60) {
           activityBar.classList.add('activity-bar-top');
         }
         
-        // 활동바가 시간 블록의 끝 부분에 위치하거나 다음 블록으로 넘어가지 않으면 하단 둥근 모서리 적용
-        if (endOffset <= 60) {
+        // 현재 시간 블록이 활동의 종료 시간을 포함하는 경우 하단 둥근 모서리 적용
+        if (recordEndMinutes > minutes && recordEndMinutes <= minutes + 60) {
           activityBar.classList.add('activity-bar-bottom');
         }
         
@@ -704,7 +734,31 @@ function renderDailyView() {
                 // 세그먼트가 현재 시간 블록을 넘어가는 경우 처리
                 const segmentEndOffset = segment.end - minutes;
                 // 높이 계산 - 시간 블록을 넘어가는 경우 처리
-                const segmentHeight = segmentEndOffset > 60 ? 100 : (segmentEndOffset / 60) * 100;
+                let segmentHeight;
+                
+                // 현재 시간 블록이 세그먼트 시작 시간을 포함하는 경우
+                if (segment.start >= minutes && segment.start < minutes + 60) {
+                  // 현재 시간 블록이 세그먼트 종료 시간도 포함하는 경우
+                  if (segment.end <= minutes + 60) {
+                    // 시작과 종료가 모두 현재 블록 내에 있는 경우
+                    segmentHeight = ((segment.end - segment.start) / 60) * 100;
+                  } else {
+                    // 시작은 현재 블록, 종료는 다음 블록인 경우
+                    segmentHeight = ((minutes + 60 - segment.start) / 60) * 100;
+                  }
+                }
+                // 현재 시간 블록이 세그먼트 종료 시간만 포함하는 경우
+                else if (segment.end > minutes && segment.end <= minutes + 60) {
+                  segmentHeight = (segment.end - minutes) / 60 * 100;
+                }
+                // 세그먼트가 현재 블록을 완전히 포함하는 경우
+                else if (segment.start < minutes && segment.end > minutes + 60) {
+                  segmentHeight = 100; // 블록 전체 높이
+                }
+                // 그 외의 경우 (세그먼트가 현재 블록과 겹치지 않음)
+                else {
+                  segmentHeight = 0;
+                }
                 const segmentTop = (segmentStartOffset / 60) * 100;
                 
                 // 높이를 약간 늘려서 활동바 사이의 1픽셀 간격 제거
@@ -728,8 +782,9 @@ function renderDailyView() {
                   }
                 }
                 
-                // 세그먼트 바가 시간 블록의 끝 부분에 위치하거나 다음 블록으로 넘어가지 않으면 하단 둥근 모서리 적용
-                if (segmentEndOffset <= 60) {
+                // 세그먼트 바가 시간 블록의 끝 부분에 위치하는 경우 하단 둥근 모서리 적용
+                // 현재 시간 블록이 세그먼트 종료 시간을 포함하는 경우에만 적용
+                if (segment.end > minutes && segment.end <= minutes + 60) {
                   if (segment.type === 'paused') {
                     segmentBar.classList.add('activity-bar-paused-bottom');
                   } else {
