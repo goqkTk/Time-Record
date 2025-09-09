@@ -680,7 +680,8 @@ body {
   border-bottom-right-radius: 4px;
 }
 
-.activity-bar-vertical:hover {
+.activity-bar-vertical:hover,
+.activity-hover {
   background: #ff6b60;
 }
 
@@ -697,6 +698,11 @@ body {
   contain: none;
   clip-path: none;
   transform: translateZ(0);
+}
+
+.activity-bar-paused.activity-hover {
+  background: #ffaaaa;
+  opacity: 0.8;
 }
 
 /* 일시정지 활동바 상단 둥근 모서리 */

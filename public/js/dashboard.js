@@ -572,10 +572,28 @@ function renderDailyView() {
         activityBar.dataset.startTime = record.start_time;
         activityBar.dataset.duration = record.duration;
         
+        // 활동바에 고유 식별자 클래스 추가 - 같은 활동의 모든 바에 동일한 클래스 적용
+        activityBar.classList.add(`activity-${recordId}`);
+        
         // 활동바 클릭 이벤트 추가
         activityBar.addEventListener('click', function(e) {
           e.stopPropagation();
           openActivityEditModal(recordId, record.start_time, record.duration);
+        });
+        
+        // 호버 이벤트 추가
+        activityBar.addEventListener('mouseenter', function() {
+          // 같은 활동에 속한 모든 활동바에 호버 효과 적용
+          document.querySelectorAll(`.activity-${recordId}`).forEach(bar => {
+            bar.classList.add('activity-hover');
+          });
+        });
+        
+        activityBar.addEventListener('mouseleave', function() {
+          // 호버 효과 제거
+          document.querySelectorAll(`.activity-${recordId}`).forEach(bar => {
+            bar.classList.remove('activity-hover');
+          });
         });
         
         // 활동 바의 위치와 높이 계산 - 분 단위로 정확하게 계산
@@ -718,8 +736,8 @@ function renderDailyView() {
                 segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
                 
                 // 활성 세그먼트에만 클릭 이벤트 추가
+                const recordId = record.id || record._id;
                 if (segment.type === 'active') {
-                  const recordId = record.id || record._id;
                   segmentBar.dataset.recordId = recordId;
                   segmentBar.dataset.startTime = record.start_time;
                   segmentBar.dataset.duration = record.duration;
@@ -729,6 +747,24 @@ function renderDailyView() {
                     openActivityEditModal(recordId, record.start_time, record.duration);
                   });
                 }
+                
+                // 세그먼트 바에 고유 식별자 클래스 추가 - 같은 활동의 모든 바에 동일한 클래스 적용
+                segmentBar.classList.add(`activity-${recordId}`);
+                
+                // 호버 이벤트 추가
+                segmentBar.addEventListener('mouseenter', function() {
+                  // 같은 활동에 속한 모든 활동바에 호버 효과 적용
+                  document.querySelectorAll(`.activity-${recordId}`).forEach(bar => {
+                    bar.classList.add('activity-hover');
+                  });
+                });
+                
+                segmentBar.addEventListener('mouseleave', function() {
+                  // 호버 효과 제거
+                  document.querySelectorAll(`.activity-${recordId}`).forEach(bar => {
+                    bar.classList.remove('activity-hover');
+                  });
+                });
                 
                 const segmentStartOffset = Math.max(0, segment.start - minutes);
                 // 세그먼트가 현재 시간 블록을 넘어가는 경우 처리
