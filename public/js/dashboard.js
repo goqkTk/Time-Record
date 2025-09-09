@@ -219,6 +219,9 @@ stopBtn.onclick = async () => {
     try {
       const sessionEndTime = new Date();
       
+      // 선택된 날짜가 있으면 해당 날짜를 사용하고, 없으면 현재 날짜 사용
+      const targetDate = selectedDate || new Date();
+      
       await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -226,7 +229,8 @@ stopBtn.onclick = async () => {
           startTime: new Date(sessionStartTime).toISOString(),
           endTime: sessionEndTime.toISOString(),
           duration: actualWorkDuration,
-          paused_intervals: pausedIntervals
+          paused_intervals: pausedIntervals,
+          targetDate: targetDate.toISOString() // 선택된 날짜 정보 추가
         })
       });
       
@@ -380,12 +384,26 @@ function renderCalendar() {
 
 prevMonthBtn.onclick = () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
+  // selectedDate가 있으면 같은 날짜로 이동
+  if (selectedDate) {
+    selectedDate = new Date(selectedDate);
+    selectedDate.setMonth(selectedDate.getMonth() - 1);
+  }
   renderCalendar();
+  renderDailyView();
+  updateStats();
 };
 
 nextMonthBtn.onclick = () => {
   currentDate.setMonth(currentDate.getMonth() + 1);
+  // selectedDate가 있으면 같은 날짜로 이동
+  if (selectedDate) {
+    selectedDate = new Date(selectedDate);
+    selectedDate.setMonth(selectedDate.getMonth() + 1);
+  }
   renderCalendar();
+  renderDailyView();
+  updateStats();
 };
 
 
@@ -1010,7 +1028,8 @@ async function updateActivity() {
       body: JSON.stringify({
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        duration: duration
+        duration: duration,
+        targetDate: baseDate.toISOString() // 선택된 날짜 정보 추가
       })
     });
     
@@ -1136,6 +1155,14 @@ function initNavigation() {
       views.forEach(view => view.classList.remove('active'));
       // 선택된 뷰 보이기
       document.getElementById(targetView).classList.add('active');
+      
+      // 달력 뷰로 전환 시 기록 새로 로드하고 달력 및 통계 업데이트
+      if (targetView === 'calendar-view') {
+        loadRecords().then(() => {
+          renderCalendar();
+          updateStats();
+        });
+      }
     });
   });
 }
@@ -1186,6 +1213,12 @@ function handleTimeCalendarToggle(toggleBtn) {
     }
 
     document.getElementById('calendar-view').classList.add('active');
+    
+    // 달력 뷰로 전환 시 기록 새로 로드하고 달력 및 통계 업데이트
+    loadRecords().then(() => {
+      renderCalendar();
+      updateStats();
+    });
   } else {
     toggleBtn.dataset.mode = 'time';
     toggleBtn.dataset.view = 'time-view';
@@ -1702,6 +1735,9 @@ async function importData(event) {
       return;
     }
     
+    // 선택된 날짜가 있으면 해당 날짜를 사용하고, 없으면 현재 날짜 사용
+    const targetDate = selectedDate || new Date();
+    
     // 서버에 데이터 업로드
     for (const record of validRecords) {
       const response = await fetch('/api/records', {
@@ -1713,7 +1749,8 @@ async function importData(event) {
           startTime: record.start_time,
           endTime: record.end_time,
           duration: record.duration,
-          pausedIntervals: record.paused_intervals || []
+          pausedIntervals: record.paused_intervals || [],
+          targetDate: targetDate.toISOString() // 선택된 날짜 정보 추가
         })
       });
       
@@ -1740,6 +1777,25 @@ async function importData(event) {
   }
 }
 
+// 실시간 업데이트 함수
+function startRealTimeUpdate() {
+  // 1분마다 현재 시간 표시선 업데이트 및 달력 데이터 갱신
+  setInterval(async () => {
+    // 현재 시간 표시선 업데이트
+    updateCurrentTimeLine();
+    
+    // 기록 새로 로드
+    await loadRecords();
+    
+    // 달력 및 통계 업데이트
+    renderCalendar();
+    updateStats();
+    
+    // 현재 보고 있는 날짜의 일간 뷰 업데이트
+    renderDailyView();
+  }, 60000); // 1분마다 업데이트
+}
+
 // 초기화
 async function init() {
   // 인증 상태 확인
@@ -1750,6 +1806,9 @@ async function init() {
   
   // 기록 로드
   await loadRecords();
+  
+  // 실시간 업데이트 시작
+  startRealTimeUpdate();
   
   // UI 초기화
   updateTotalTimer();

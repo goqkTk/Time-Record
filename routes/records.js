@@ -12,7 +12,7 @@ function requireAuth(req, res, next) {
 
 // 기록 저장 API
 router.post('/', requireAuth, (req, res) => {
-  const { startTime, endTime, duration, pausedIntervals } = req.body;
+  const { startTime, endTime, duration, pausedIntervals, targetDate } = req.body;
   if (!startTime || !endTime || !duration) {
     return res.status(400).json({ error: '필수 값 누락' });
   }
@@ -23,9 +23,12 @@ router.post('/', requireAuth, (req, res) => {
   const pausedIntervalsJson = pausedIntervals ? JSON.stringify(pausedIntervals) : null;
   const userId = req.session.userId;
   
+  // targetDate가 제공되면 해당 날짜를 사용, 아니면 원래 startTime 사용
+  const finalStartTime = targetDate || startTime;
+  
   db.run(
     'INSERT INTO records (start_time, end_time, duration, paused_intervals, user_id) VALUES (?, ?, ?, ?, ?)',
-    [startTime, endTime, duration, pausedIntervalsJson, userId],
+    [finalStartTime, endTime, duration, pausedIntervalsJson, userId],
     function (err) {
       if (err) return res.status(500).json({ error: 'DB 오류' });
       res.json({ id: this.lastID });
@@ -55,7 +58,7 @@ router.get('/', requireAuth, (req, res) => {
 router.put('/:id', requireAuth, (req, res) => {
   const recordId = req.params.id;
   const userId = req.session.userId;
-  const { startTime, endTime, duration } = req.body;
+  const { startTime, endTime, duration, targetDate } = req.body;
   
   if (!startTime || !endTime || !duration) {
     return res.status(400).json({ error: '필수 값 누락' });
@@ -68,10 +71,13 @@ router.put('/:id', requireAuth, (req, res) => {
     if (err) return res.status(500).json({ error: 'DB 오류' });
     if (!row) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
     
+    // targetDate가 제공되면 해당 날짜를 사용, 아니면 원래 startTime 사용
+    const finalStartTime = targetDate || startTime;
+    
     // 레코드 업데이트
     db.run(
       'UPDATE records SET start_time = ?, end_time = ?, duration = ? WHERE id = ? AND user_id = ?',
-      [startTime, endTime, duration, recordId, userId],
+      [finalStartTime, endTime, duration, recordId, userId],
       function(err) {
         if (err) return res.status(500).json({ error: 'DB 오류' });
         if (this.changes === 0) return res.status(404).json({ error: '레코드를 찾을 수 없거나 접근 권한이 없습니다.' });
