@@ -159,6 +159,11 @@ body {
   margin: 0 auto;
 }
 
+/* 일요일 선택 시 숫자 색상 (하얀색) */
+.calendar-day.sunday.selected .day-number {
+  color: white;
+}
+
 .calendar-day.today-unselected .day-number {
   background-color: #2196F3;
 }
@@ -179,9 +184,68 @@ body {
   margin: 0 auto;
 }
 
+/* 토요일과 일요일 스타일 */
+.day-header.sunday-header {
+  color: #ff3b30; /* 빨간색 */
+}
+
+.day-header.saturday-header {
+  color: #007aff; /* 파란색 */
+}
+
+.calendar-day.sunday .day-number {
+  color: #ff3b30; /* 빨간색 */
+}
+
+/* 토요일 스타일 제거하고 원래대로 복원 */
+/* .calendar-day.saturday .day-number {
+  color: #007aff;
+} */
+
+/* 다크 모드에서도 토요일과 일요일 색상 유지 */
+body.dark-mode .day-header.sunday-header {
+  color: #ff453a; /* 다크 모드 빨간색 */
+}
+
+/* 다크 모드 토요일 헤더 스타일 제거 */
+/* body.dark-mode .day-header.saturday-header {
+  color: #0a84ff;
+} */
+
+body.dark-mode .calendar-day.sunday .day-number {
+  color: #ff453a; /* 다크 모드 빨간색 */
+}
+
+/* 다크 모드 토요일 스타일 제거 */
+/* body.dark-mode .calendar-day.saturday .day-number {
+  color: #0a84ff;
+} */
+
 .calendar-day.other-month {
   color: #ccc;
 }
+
+.calendar-day.other-month.sunday {
+  color: #ffb3b0; /* 연한 빨간색 */
+}
+
+/* 다른 달 토요일 스타일 제거 */
+/* .calendar-day.other-month.saturday {
+  color: #b3d7ff;
+} */
+
+body.dark-mode .calendar-day.other-month {
+  color: #666;
+}
+
+body.dark-mode .calendar-day.other-month.sunday {
+  color: #994040; /* 다크 모드 연한 빨간색 */
+}
+
+/* 다크 모드 다른 달 토요일 스타일 제거 */
+/* body.dark-mode .calendar-day.other-month.saturday {
+  color: #405c99;
+} */
 
 .calendar-day.has-record {
   font-weight: bold;
@@ -1244,6 +1308,11 @@ body.dark-mode .calendar-day.selected .day-number {
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+}
+
+/* 다크 모드 일요일 선택 시 숫자 색상 (하얀색) */
+body.dark-mode .calendar-day.sunday.selected .day-number {
+  color: white;
 }
 
 body.dark-mode .calendar-day.today.selected {

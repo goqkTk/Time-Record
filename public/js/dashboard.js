@@ -261,12 +261,21 @@ function renderCalendar() {
     dayHeaders = ['월', '화', '수', '목', '금', '토', '일'];
   }
   
-  dayHeaders.forEach(day => {
+  dayHeaders.forEach((day, index) => {
     const dayEl = document.createElement('div');
     dayEl.className = 'day-header';
+    
+    // 일요일에만 색상 적용
+    if ((weekStartSetting === 0 && index === 0) || 
+        (weekStartSetting === 1 && index === 6)) {
+      // 일요일은 빨간색
+      dayEl.classList.add('sunday-header');
+    }
+    
     dayEl.textContent = day;
     calendarGrid.appendChild(dayEl);
   });
+
   
   // 첫 번째 날의 요일 구하기
   let firstDay = new Date(year, month, 1).getDay();
@@ -281,7 +290,20 @@ function renderCalendar() {
   for (let i = firstDay - 1; i >= 0; i--) {
     const dayEl = document.createElement('div');
     dayEl.className = 'calendar-day other-month';
-    dayEl.textContent = prevMonth.getDate() - i;
+    
+    // 이전 달의 날짜 계산
+    const prevMonthDay = prevMonth.getDate() - i;
+    dayEl.textContent = prevMonthDay;
+    
+    // 요일 계산 (이전 달의 해당 날짜)
+    const prevMonthDate = new Date(year, month - 1, prevMonthDay);
+    const dayOfWeek = prevMonthDate.getDay();
+    
+    // 일요일인 경우에만 클래스 추가
+    if (dayOfWeek === 0) {
+      dayEl.classList.add('sunday');
+    }
+    
     calendarGrid.appendChild(dayEl);
   }
   
@@ -292,6 +314,12 @@ function renderCalendar() {
     dayEl.className = 'calendar-day';
     
     const currentDay = new Date(year, month, day);
+    
+    // 일요일인 경우에만 클래스 추가 (일요일: 0)
+    const dayOfWeek = currentDay.getDay();
+    if (dayOfWeek === 0) {
+      dayEl.classList.add('sunday');
+    }
     
     // 날짜 숫자
     const dayNumber = document.createElement('div');
@@ -350,6 +378,16 @@ function renderCalendar() {
     const dayEl = document.createElement('div');
     dayEl.className = 'calendar-day other-month';
     dayEl.textContent = day;
+    
+    // 요일 계산 (다음 달의 해당 날짜)
+    const nextMonthDate = new Date(year, month + 1, day);
+    const dayOfWeek = nextMonthDate.getDay();
+    
+    // 일요일인 경우에만 클래스 추가
+    if (dayOfWeek === 0) {
+      dayEl.classList.add('sunday');
+    }
+    
     calendarGrid.appendChild(dayEl);
   }
 }
