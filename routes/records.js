@@ -62,10 +62,12 @@ router.get('/', requireAuth, (req, res) => {
     if (err) return res.status(500).json({ error: 'DB 오류' });
     
     // paused_intervals JSON 문자열을 객체로 파싱
-    const processedRows = rows.map(row => ({
-      ...row,
-      paused_intervals: row.paused_intervals ? JSON.parse(row.paused_intervals) : []
-    }));
+    const processedRows = rows.map(row => {
+      return {
+        ...row,
+        paused_intervals: row.paused_intervals ? JSON.parse(row.paused_intervals) : []
+      };
+    });
     
     res.json(processedRows);
   });

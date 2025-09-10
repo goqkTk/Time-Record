@@ -753,15 +753,17 @@ body.dark-mode .calendar-day.other-month.sunday {
   position: absolute;
   left: 8px;
   width: 12px;
-  background: #ffcccc;
+  background: #ff9999;
   border-radius: 0;
   min-height: 2px;
-  opacity: 0.6;
-  z-index: 4;
+  opacity: 1;
+  z-index: 6;
   overflow: visible;
   contain: none;
   clip-path: none;
   transform: translateZ(0);
+  pointer-events: auto;
+  box-shadow: 0 0 3px rgba(255, 0, 0, 0.3);
 }
 
 .activity-bar-paused.activity-hover {

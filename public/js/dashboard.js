@@ -592,6 +592,9 @@ function renderDailyView() {
         const activityBar = document.createElement('div');
         activityBar.className = 'activity-bar-vertical';
         
+        // 디버깅: 활동 바 생성
+        console.log('활동 바 생성:', record.id || record._id);
+        
         // 레코드 ID 설정
         const recordId = record.id || record._id;
         
@@ -707,12 +710,18 @@ function renderDailyView() {
         activityArea.appendChild(activityBar);
         
         // 일시정지된 시간 구간을 활동 바에서 제외하고 별도로 표시
-        if (record.paused_intervals && record.paused_intervals.length > 0) {
+        const pausedIntervals = record.paused_intervals || [];
+        if (pausedIntervals && Array.isArray(pausedIntervals) && pausedIntervals.length > 0) {
+          // 디버깅: 일시정지 구간이 있는 기록 확인
+          console.log('일시정지 구간이 있는 기록:', record);
           // 활동 시간을 세그먼트로 나누기
           const segments = [];
           let currentStart = recordStartMinutes;
           
-          record.paused_intervals.forEach(pausedInterval => {
+          // 디버깅: 일시정지 구간 정보 출력
+          console.log('일시정지 구간 정보:', pausedIntervals);
+          
+          pausedIntervals.forEach(pausedInterval => {
             if (pausedInterval.start && pausedInterval.end) {
               const pauseStart = new Date(pausedInterval.start);
               const pauseEnd = new Date(pausedInterval.end);
@@ -720,6 +729,7 @@ function renderDailyView() {
               // 날짜 비교를 위해 표시 날짜와 일시정지 시작/종료 날짜 가져오기
               const pauseStartDateStr = pauseStart.toDateString();
               const pauseEndDateStr = pauseEnd.toDateString();
+              const displayDateStr = displayDate.toDateString();
               
               // 시작 시간과 종료 시간의 분 계산
               let pauseStartMinutes = pauseStart.getHours() * 60 + pauseStart.getMinutes();
@@ -754,14 +764,32 @@ function renderDailyView() {
             segments.push({ start: currentStart, end: recordEndMinutes, type: 'active' });
           }
           
+          // 디버깅: 세그먼트 정보 출력
+          console.log('세그먼트 정보:', segments);
+          
           // 기존 활동 바 제거하고 세그먼트별로 다시 생성
-          activityArea.removeChild(activityBar);
+          try {
+            if (activityBar.parentNode === activityArea) {
+              activityArea.removeChild(activityBar);
+            }
+          } catch (error) {
+            console.error('활동 바 제거 중 오류:', error);
+          }
           
           segments.forEach(segment => {
             // 현재 시간 블록에 표시할 세그먼트인지 확인
             if (segment.start < minutes + 60 && segment.end > minutes) {
                 const segmentBar = document.createElement('div');
                 segmentBar.className = segment.type === 'paused' ? 'activity-bar-paused' : 'activity-bar-vertical';
+                
+                // 일시정지 세그먼트는 더 눈에 띄게 만들기
+                if (segment.type === 'paused') {
+                  segmentBar.style.height = '100%';
+                  segmentBar.title = '일시정지 시간';
+                }
+                
+                // 디버깅: 세그먼트 바 생성 정보
+                console.log('세그먼트 바 생성:', segment.type, segment.start, segment.end);
                 
                 // 활성 세그먼트에만 클릭 이벤트 추가
                 const recordId = record.id || record._id;
@@ -831,7 +859,7 @@ function renderDailyView() {
                 
                 // 세그먼트 바가 시간 블록 경계를 넘어갈 수 있도록 position과 z-index 설정
                 segmentBar.style.position = 'absolute';
-                segmentBar.style.zIndex = segment.type === 'paused' ? '4' : '5';
+                segmentBar.style.zIndex = segment.type === 'paused' ? '6' : '5';
                 segmentBar.style.clipPath = 'none';
                 segmentBar.style.overflow = 'visible';
                 
@@ -953,6 +981,21 @@ async function loadRecords() {
     });
     if (response.ok) {
       records = await response.json();
+      
+      // 디버깅: 서버에서 받아온 기록 데이터 확인
+      console.log('서버에서 받아온 기록:', records);
+      
+      // paused_intervals 필드가 문자열인 경우 파싱
+      records.forEach(record => {
+        if (record.paused_intervals && typeof record.paused_intervals === 'string') {
+          try {
+            record.paused_intervals = JSON.parse(record.paused_intervals);
+          } catch (e) {
+            console.error('일시정지 구간 파싱 오류:', e);
+            record.paused_intervals = [];
+          }
+        }
+      });
     } else if (response.status === 401) {
       // 인증 오류 - 로그인 페이지로 리디렉션
       alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
@@ -962,6 +1005,7 @@ async function loadRecords() {
       records = [];
     }
   } catch (error) {
+    console.error('기록 로드 오류:', error);
     records = [];
   }
 }
