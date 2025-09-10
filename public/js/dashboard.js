@@ -62,24 +62,9 @@ function formatTime(ms) {
   const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
   const s = String(totalSeconds % 60).padStart(2, '0');
   
-  // 시간 형식 설정 적용
-  let timeFormatSetting = window.userSettings?.timeFormat;
-  if (!timeFormatSetting) {
-    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-    timeFormatSetting = localStorage.getItem('timeFormat') || '12';
-  }
-  
-  if (timeFormatSetting === '12') {
-    // 12시간제 형식
-    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    const h = String(displayHour).padStart(2, '0');
-    const ampm = hours < 12 ? 'AM' : 'PM';
-    return `${h}:${m}:${s} ${ampm}`;
-  } else {
-    // 24시간제 형식
-    const h = String(hours).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  }
+  // 타이머 표시는 항상 24시간제 형식으로 표시 (00:00:00)
+  const h = String(hours).padStart(2, '0');
+  return `${h}:${m}:${s}`;
 }
 
 function formatDuration(ms) {
@@ -94,21 +79,8 @@ function formatDurationShort(ms) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   
-  // 시간 형식 설정 적용
-  let timeFormatSetting = window.userSettings?.timeFormat;
-  if (!timeFormatSetting) {
-    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-    timeFormatSetting = localStorage.getItem('timeFormat') || '12';
-  }
-  
-  if (timeFormatSetting === '12') {
-    // 12시간제 형식 (시간이 12를 넘어가면 표시 방식 변경)
-    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${displayHour}:${minutes.toString().padStart(2, '0')}`;
-  } else {
-    // 24시간제 형식
-    return `${hours}:${minutes.toString().padStart(2, '0')}`;
-  }
+  // 항상 24시간제 형식으로 표시
+  return `${hours}:${minutes.toString().padStart(2, '0')}`;
 }
 
 function isToday(date) {
