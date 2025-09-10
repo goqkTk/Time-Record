@@ -1527,7 +1527,8 @@ function initFloatingMenu() {
           startTime: startDateTime.toISOString(),
           endTime: endDateTime.toISOString(),
           duration: duration,
-          pausedIntervals: []
+          pausedIntervals: [],
+          targetDate: targetDate.toISOString() // 선택된 날짜 정보 추가
         })
       });
       

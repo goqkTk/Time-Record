@@ -23,8 +23,25 @@ router.post('/', requireAuth, (req, res) => {
   const pausedIntervalsJson = pausedIntervals ? JSON.stringify(pausedIntervals) : null;
   const userId = req.session.userId;
   
-  // targetDate가 제공되면 해당 날짜를 사용, 아니면 원래 startTime 사용
-  const finalStartTime = targetDate || startTime;
+  // targetDate가 제공되면 해당 날짜와 startTime의 시간을 결합, 아니면 원래 startTime 사용
+  let finalStartTime = startTime;
+  
+  if (targetDate) {
+    // targetDate에서 날짜 부분만 추출
+    const targetDateObj = new Date(targetDate);
+    // startTime에서 시간 부분만 추출
+    const startTimeObj = new Date(startTime);
+    
+    // 날짜와 시간 결합
+    targetDateObj.setHours(
+      startTimeObj.getHours(),
+      startTimeObj.getMinutes(),
+      startTimeObj.getSeconds(),
+      startTimeObj.getMilliseconds()
+    );
+    
+    finalStartTime = targetDateObj.toISOString();
+  }
   
   db.run(
     'INSERT INTO records (start_time, end_time, duration, paused_intervals, user_id) VALUES (?, ?, ?, ?, ?)',
