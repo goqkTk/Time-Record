@@ -1073,6 +1073,31 @@ body.dark-mode .calendar-day.other-month.sunday {
   color: #6b7280;
 }
 
+.setting-warning {
+  display: block;
+  font-size: 13px;
+  color: #ff3b30;
+  margin-top: 4px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.setting-warning::before {
+  content: "!";
+  margin-right: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background-color: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+}
+
 .setting-select {
   padding: 10px 14px;
   border: 1px solid #e5e7eb;
@@ -1568,6 +1593,15 @@ body.dark-mode .setting-title {
 
 body.dark-mode .setting-desc {
   color: #94a3b8;
+}
+
+body.dark-mode .setting-warning {
+  color: #ff453a;
+}
+
+body.dark-mode .setting-warning::before {
+  background-color: #ff453a;
+  color: #242526;
 }
 
 body.dark-mode .setting-select {

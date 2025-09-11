@@ -9,7 +9,7 @@ module.exports = {
 
   // 세션 설정
   session: {
-    secret: process.env.SKEY || 'default-secret-key',
+    secret: process.env.SKEY || 'superduperholymolylegendpublickey',
     resave: false,
     saveUninitialized: false,
     cookie: {
