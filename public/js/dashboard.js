@@ -112,130 +112,131 @@ function updateTotalTimer() {
   }
 }
 
-startBtn.onclick = () => {
-  startTime = Date.now();
-  if (sessionStartTime === null) {
-    sessionStartTime = startTime;
-    pausedIntervals = [];
-  } else if (isPaused && pausedIntervals.length > 0) {
-    // 일시정지에서 재시작할 때 일시정지 구간의 끝 시간 기록
-    const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
-    if (!lastPausedInterval.end) {
-      lastPausedInterval.end = startTime;
-    }
-  }
-  timerInterval = setInterval(updateTimer, 1000);
-  isPaused = false;
-  
-  // 타이머 UI 확장 애니메이션
-  floatingTimer.classList.add('expanded');
-  timerDisplay.style.display = 'block';
-  
-  // 버튼 상태 변경
-  startBtn.style.display = 'none';
-  pauseBtn.style.display = 'flex';
-  stopBtn.style.display = 'flex';
-};
-
-
-
-pauseBtn.onclick = () => {
-  clearInterval(timerInterval);
-  totalElapsed += elapsed;
-  
-  // 일시정지 구간 기록
-  const pauseStartTime = Date.now();
-  pausedIntervals.push({ start: pauseStartTime });
-  
-  isPaused = true;
-  timerInterval = null;
-  
-  // 현재 타이머 리셋하고 총 시간 업데이트
-  resetTimer();
-  updateTotalTimer();
-  
-  // 버튼 상태 변경 (재시작 ��이콘으로 변경)
-  startBtn.innerHTML = '⏯';
-  startBtn.style.display = 'flex';
-  pauseBtn.style.display = 'none';
-  stopBtn.style.display = 'flex';
-};
-
-stopBtn.onclick = async () => {
-  clearInterval(timerInterval);
-  
-  // 현재 일시정지 중이면 마지막 일시정지 구간 종료
-  if (isPaused && pausedIntervals.length > 0) {
-    const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
-    if (!lastPausedInterval.end) {
-      lastPausedInterval.end = Date.now();
-    }
-  }
-  
-  // 총 시간 계산 (일시정지 시간 제외)
-  const finalDuration = totalElapsed + elapsed;
-  
-  if (finalDuration > 0 && sessionStartTime) {
-    // 일시정지된 총 시간 계산
-    let totalPausedTime = 0;
-    pausedIntervals.forEach(interval => {
-      if (interval.start && interval.end) {
-        totalPausedTime += interval.end - interval.start;
+// 타이머 컨트롤 초기화 함수
+function initTimerControls() {
+  startBtn.onclick = () => {
+    startTime = Date.now();
+    if (sessionStartTime === null) {
+      sessionStartTime = startTime;
+      pausedIntervals = [];
+    } else if (isPaused && pausedIntervals.length > 0) {
+      // 일시정지에서 재시작할 때 일시정지 구간의 끝 시간 기록
+      const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
+      if (!lastPausedInterval.end) {
+        lastPausedInterval.end = startTime;
       }
-    });
+    }
+    timerInterval = setInterval(updateTimer, 1000);
+    isPaused = false;
     
-    // 실제 작업 시간 (일시정지 시간 제외)
-    const actualWorkDuration = finalDuration;
+    // 타이머 UI 확장 애니메이션
+    floatingTimer.classList.add('expanded');
+    timerDisplay.style.display = 'block';
     
-    // 서버로 기록 전송
-    try {
-      const sessionEndTime = new Date();
-      
-      // 선택된 날짜가 있으면 해당 날짜를 사용하고, 없으면 현재 날짜 사용
-      const targetDate = selectedDate || new Date();
-      
-      await fetch('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startTime: new Date(sessionStartTime).toISOString(),
-          endTime: sessionEndTime.toISOString(),
-          duration: actualWorkDuration,
-          paused_intervals: pausedIntervals,
-          targetDate: targetDate.toISOString() // 선택된 날짜 정보 추가
-        })
+    // 버튼 상태 변경
+    startBtn.style.display = 'none';
+    pauseBtn.style.display = 'flex';
+    stopBtn.style.display = 'flex';
+  };
+  
+  pauseBtn.onclick = () => {
+    clearInterval(timerInterval);
+    totalElapsed += elapsed;
+    
+    // 일시정지 구간 기록
+    const pauseStartTime = Date.now();
+    pausedIntervals.push({ start: pauseStartTime });
+    
+    isPaused = true;
+    timerInterval = null;
+    
+    // 현재 타이머 리셋하고 총 시간 업데이트
+    resetTimer();
+    updateTotalTimer();
+    
+    // 버튼 상태 변경 (재시작 아이콘으로 변경)
+    startBtn.innerHTML = '⏯';
+    startBtn.style.display = 'flex';
+    pauseBtn.style.display = 'none';
+    stopBtn.style.display = 'flex';
+  };
+  
+  stopBtn.onclick = async () => {
+    clearInterval(timerInterval);
+    
+    // 현재 일시정지 중이면 마지막 일시정지 구간 종료
+    if (isPaused && pausedIntervals.length > 0) {
+      const lastPausedInterval = pausedIntervals[pausedIntervals.length - 1];
+      if (!lastPausedInterval.end) {
+        lastPausedInterval.end = Date.now();
+      }
+    }
+    
+    // 총 시간 계산 (일시정지 시간 제외)
+    const finalDuration = totalElapsed + elapsed;
+    
+    if (finalDuration > 0 && sessionStartTime) {
+      // 일시정지된 총 시간 계산
+      let totalPausedTime = 0;
+      pausedIntervals.forEach(interval => {
+        if (interval.start && interval.end) {
+          totalPausedTime += interval.end - interval.start;
+        }
       });
       
-      // 로컬 기록 업데이트
-      await loadRecords();
-      updateStats();
-      renderCalendar();
-      renderDailyView();
-    } catch (error) {
-      console.error('기록 저장 실패:', error);
+      // 실제 작업 시간 (일시정지 시간 제외)
+      const actualWorkDuration = finalDuration;
+      
+      // 서버로 기록 전송
+      try {
+        const sessionEndTime = new Date();
+        
+        // 선택된 날짜가 있으면 해당 날짜를 사용하고, 없으면 현재 날짜 사용
+        const targetDate = selectedDate || new Date();
+        
+        await fetch('/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startTime: new Date(sessionStartTime).toISOString(),
+            endTime: sessionEndTime.toISOString(),
+            duration: actualWorkDuration,
+            paused_intervals: pausedIntervals,
+            targetDate: targetDate.toISOString() // 선택된 날짜 정보 추가
+          })
+        });
+        
+        // 로컬 기록 업데이트
+        await loadRecords();
+        updateStats();
+        renderCalendar();
+        renderDailyView();
+      } catch (error) {
+        console.error('기록 저장 실패:', error);
+      }
     }
-  }
-  
-  // 모든 타이머 리셋
-  resetTimer();
-  totalElapsed = 0;
-  elapsed = 0;
-  isPaused = false;
-  sessionStartTime = null;
-  pausedIntervals = [];
-  timerInterval = null;
-  updateTotalTimer();
-  
-  // UI 초기 상태로 복원
-  floatingTimer.classList.remove('expanded');
-  timerDisplay.style.display = 'none';
-  
-  // 버튼 상태 초기화
-  startBtn.innerHTML = '▶';
-  startBtn.style.display = 'flex';
-  pauseBtn.style.display = 'none';
-  stopBtn.style.display = 'none';
-};
+    
+    // 모든 타이머 리셋
+    resetTimer();
+    totalElapsed = 0;
+    elapsed = 0;
+    isPaused = false;
+    sessionStartTime = null;
+    pausedIntervals = [];
+    timerInterval = null;
+    updateTotalTimer();
+    
+    // UI 초기 상태로 복원
+    floatingTimer.classList.remove('expanded');
+    timerDisplay.style.display = 'none';
+    
+    // 버튼 상태 초기화
+    startBtn.innerHTML = '▶';
+    startBtn.style.display = 'flex';
+    pauseBtn.style.display = 'none';
+    stopBtn.style.display = 'none';
+  };
+}
 
 // 달력 기능
 function renderCalendar() {
@@ -1455,9 +1456,7 @@ async function logout() {
 }
 
 // 플로팅 메뉴 기능
-function initFloatingMenu() {
-  const menuToggleBtn = document.getElementById('menuToggleBtn');
-  const menuOptions = document.getElementById('menuOptions');
+function initActionButtons() {
   const timeInputBtn = document.getElementById('timeInputBtn');
   const timeInputModal = document.getElementById('timeInputModal');
   const modalClose = document.getElementById('modalClose');
@@ -1465,6 +1464,7 @@ function initFloatingMenu() {
   const saveTimeBtn = document.getElementById('saveTimeBtn');
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
+  const timerControls = document.getElementById('floatingTimer');
   
   // 활동바 수정 모달 이벤트 리스너 초기화
   console.log('활동 수정 모달 이벤트 리스너 초기화');
@@ -1490,24 +1490,6 @@ function initFloatingMenu() {
   activityEditModal.addEventListener('click', (e) => {
     if (e.target === activityEditModal) {
       closeActivityEditModal();
-    }
-  });
-  
-  let isMenuOpen = false;
-  
-  // 메뉴 토글
-  menuToggleBtn.addEventListener('click', () => {
-    isMenuOpen = !isMenuOpen;
-    menuToggleBtn.classList.toggle('active', isMenuOpen);
-    menuOptions.classList.toggle('active', isMenuOpen);
-  });
-  
-  // 메뉴 외부 클릭 시 닫기
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.floating-menu') && isMenuOpen) {
-      isMenuOpen = false;
-      menuToggleBtn.classList.remove('active');
-      menuOptions.classList.remove('active');
     }
   });
   
@@ -1537,6 +1519,15 @@ function initFloatingMenu() {
       closeModal();
     }
   });
+  
+  // 타이머 토글 설정에 따라 타이머 표시 여부 결정
+  const showTimerSetting = (window.userSettings && window.userSettings.showTimer) || localStorage.getItem('showTimer');
+  if (showTimerSetting === 'true') {
+    timerControls.style.display = 'flex';
+    initTimerControls();
+  } else {
+    timerControls.style.display = 'none';
+  }
   
   // 시간 저장
   saveTimeBtn.addEventListener('click', async () => {
@@ -1626,6 +1617,16 @@ async function loadUserSettings() {
   }
 }
 
+// 사용자 설정 가져오기
+function getUserSetting(settingKey) {
+  // 1. 전역 설정 객체에서 확인
+  if (window.userSettings && window.userSettings[settingKey] !== undefined) {
+    return window.userSettings[settingKey];
+  }
+  // 2. localStorage에서 확인
+  return localStorage.getItem(settingKey);
+}
+
 // 사용자 설정 저장
 async function saveUserSetting(settingKey, settingValue) {
   try {
@@ -1646,6 +1647,9 @@ async function saveUserSetting(settingKey, settingValue) {
         window.userSettings = {};
       }
       window.userSettings[settingKey] = settingValue;
+      
+      // localStorage에도 저장하여 새로고침 시 설정 유지
+      localStorage.setItem(settingKey, settingValue);
     } else {
       console.error('설정 저장 실패:', response.status);
     }
@@ -1704,6 +1708,23 @@ async function initAdditionalSettings() {
     await saveUserSetting('weekStart', weekStartSelect.value);
     // 캘린더 다시 렌더링
     renderCalendar();
+  });
+  
+  // 타이머 표시 설정
+  const showTimer = settings.showTimer === 'true' || localStorage.getItem('showTimer') === 'true';
+  timerToggle.checked = showTimer;
+  timerToggle.addEventListener('change', async () => {
+    const isVisible = timerToggle.checked;
+    const timerControls = document.getElementById('floatingTimer');
+    timerControls.style.display = isVisible ? 'flex' : 'none';
+    await saveUserSetting('showTimer', isVisible.toString());
+    // localStorage에도 저장하여 새로고침 시 설정 유지
+    localStorage.setItem('showTimer', isVisible.toString());
+    
+    // 타이머가 표시되면 타이머 컨트롤 초기화
+    if (isVisible) {
+      initTimerControls();
+    }
   });
   
   // 다크 모드 설정
@@ -1871,7 +1892,7 @@ async function init() {
   renderDailyView();
   updateStats();
   initNavigation();
-  initFloatingMenu();
+  initActionButtons();
   await initTimerToggle();
   await initAdditionalSettings();
   

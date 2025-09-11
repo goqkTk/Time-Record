@@ -25,40 +25,27 @@
       <!-- 시간 화면 -->
       <div id="time-view" class="view active">
         <div class="daily-view">
-          <!-- 플로팅 메뉴 -->
-          <div class="floating-menu" id="floatingMenu">
-            <!-- 메인 메뉴 버튼 -->
-            <button class="menu-toggle-btn" id="menuToggleBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="1"></circle>
-                <circle cx="12" cy="5" r="1"></circle>
-                <circle cx="12" cy="19" r="1"></circle>
+          <!-- 상단 버튼 영역 -->
+          <div class="action-buttons" id="actionButtons">
+            <!-- 시간 직접 입력 버튼 -->
+            <button class="action-button time-input-button" id="timeInputBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
               </svg>
+              <span>시간 입력</span>
             </button>
             
-            <!-- 메뉴 옵션들 -->
-            <div class="menu-options" id="menuOptions">
-              <!-- 타이머 옵션 -->
-              <div class="menu-option timer-option" id="timerOption">
-                <div class="floating-timer" id="floatingTimer">
-                  <button id="startBtn" class="floating-timer-btn start-only">▶</button>
-                  <div class="floating-timer-display" id="timerDisplay" style="display: none;">
-                    <span id="timer" class="current-timer">0:00:00</span>
-                    <span id="totalTimer" class="total-timer">총: 0:00:00</span>
-                  </div>
-                  <button id="pauseBtn" class="floating-timer-btn" style="display: none;">⏸</button>
-                  <button id="stopBtn" class="floating-timer-btn" style="display: none;">⏹</button>
+            <!-- 타이머 버튼 -->
+            <div class="timer-container" id="timerOption">
+              <div class="timer-controls" id="floatingTimer">
+                <button id="startBtn" class="timer-btn start-only">▶</button>
+                <div class="timer-display" id="timerDisplay" style="display: none;">
+                  <span id="timer" class="current-timer">0:00:00</span>
+                  <span id="totalTimer" class="total-timer">총: 0:00:00</span>
                 </div>
-              </div>
-              
-              <!-- 시간 직접 입력 옵션 -->
-              <div class="menu-option time-input-option" id="timeInputOption">
-                <button class="time-input-btn" id="timeInputBtn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 20h9"></path>
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                  </svg>
-                </button>
+                <button id="pauseBtn" class="timer-btn" style="display: none;">⏸</button>
+                <button id="stopBtn" class="timer-btn" style="display: none;">⏹</button>
               </div>
             </div>
           </div>

@@ -268,35 +268,43 @@ body.dark-mode .calendar-day.other-month.sunday {
   position: relative;
 }
 
-/* 플로팅 메뉴 스타일 */
-.floating-menu {
-  position: fixed;
-  bottom: 100px;
-  right: 20px;
-  z-index: 1000;
+/* 상단 버튼 영역 스타일 */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 20px;
+  gap: 10px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.menu-toggle-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #4CAF50;
-  border: none;
-  color: white;
-  cursor: pointer;
+.action-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  z-index: 1001;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.menu-toggle-btn:hover {
-  background: #45a049;
-  transform: scale(1.1);
-  box-shadow: 0 6px 25px rgba(76, 175, 80, 0.4);
+.time-input-button {
+  background: #2196F3;
+  color: white;
+  box-shadow: 0 2px 10px rgba(33, 150, 243, 0.2);
+}
+
+.time-input-button:hover {
+  background: #1976D2;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
 }
 
 .menu-toggle-btn.active {
@@ -351,53 +359,54 @@ body.dark-mode .calendar-day.other-month.sunday {
   }
 }
 
-/* 플로팅 타이머 스타일 (메뉴 옵션 내부) */
-.floating-timer {
+/* 타이머 컨트롤 스타일 */
+.timer-container {
+  display: flex;
+  align-items: center;
+}
+
+.timer-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 25px;
-  padding: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #f5f5f5;
+  border-radius: 20px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
 }
 
-.floating-timer.expanded {
+.timer-controls.expanded {
   width: auto;
   min-width: 200px;
-  padding: 8px 15px;
-  border-radius: 25px;
 }
 
-.floating-timer-btn {
-  background: none;
+.timer-btn {
   border: none;
-  color: #333;
-  font-size: 18px;
+  color: #555; /* 아이콘 색상을 회색으로 변경 */
+  font-size: 16px;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  padding: 6px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   flex-shrink: 0;
+  background: transparent; /* 배경색 제거 */
 }
 
-.floating-timer-btn:hover {
-  background-color: rgba(0,0,0,0.1);
+.timer-btn:hover {
+  transform: scale(1.1);
+  color: #333; /* 아이콘 색상만 약간 진하게 */
 }
 
-.floating-timer-btn.start-only {
-  width: 36px;
-  height: 36px;
+.timer-btn.start-only {
+  width: 32px;
+  height: 32px;
 }
 
-.floating-timer-display {
+.timer-display {
   color: #333;
   font-size: 16px;
   font-weight: 500;
@@ -410,15 +419,15 @@ body.dark-mode .calendar-day.other-month.sunday {
   gap: 2px;
 }
 
-.floating-timer.expanded .floating-timer-display {
+.timer-controls.expanded .timer-display {
   opacity: 1;
 }
 
-.floating-timer .current-timer {
+.timer-controls .current-timer {
   font-family: 'Courier New', monospace;
 }
 
-.floating-timer .total-timer {
+.timer-controls .total-timer {
   font-family: 'Courier New', monospace;
   font-size: 12px;
   color: #666;
