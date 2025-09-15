@@ -926,10 +926,23 @@ function renderDailyView() {
 }
 
 // 통계 업데이트
+// 차트 객체를 저장할 변수들
+let weeklyChartObj = null;
+let monthlyChartObj = null;
+let hourlyChartObj = null;
+
 function updateStats() {
+  // 통계 탭이 활성화되어 있는지 확인
+  const statsView = document.getElementById('stats-view');
+  if (!statsView || !statsView.classList.contains('active')) {
+    // 통계 탭이 활성화되어 있지 않으면 업데이트하지 않음
+    return;
+  }
+  
+  // DOM 요소 존재 여부 확인 후 업데이트
   // 총 시간 계산
   const totalDuration = records.reduce((sum, record) => sum + record.duration, 0);
-  totalTimeEl.textContent = formatDuration(totalDuration);
+  if (totalTimeEl) totalTimeEl.textContent = formatDuration(totalDuration);
   
   // 오늘 시간 계산
   const today = new Date();
@@ -940,7 +953,7 @@ function updateStats() {
     })
     .reduce((sum, record) => sum + record.duration, 0);
   
-  todayTimeEl.textContent = formatDuration(todayDuration);
+  if (todayTimeEl) todayTimeEl.textContent = formatDuration(todayDuration);
   
   // 선택한 날짜 시간 계산
   if (selectedDate) {
@@ -951,11 +964,11 @@ function updateStats() {
       })
       .reduce((sum, record) => sum + record.duration, 0);
     
-    selectedDateTimeEl.textContent = formatDuration(selectedDuration);
-    selectedDateEl.textContent = selectedDate.toLocaleDateString('ko-KR');
+    if (selectedDateTimeEl) selectedDateTimeEl.textContent = formatDuration(selectedDuration);
+    if (selectedDateEl) selectedDateEl.textContent = selectedDate.toLocaleDateString('ko-KR');
   } else {
-    selectedDateTimeEl.textContent = '0시간 0분';
-    selectedDateEl.textContent = '날짜를 선택하세요';
+    if (selectedDateTimeEl) selectedDateTimeEl.textContent = '0시간 0분';
+    if (selectedDateEl) selectedDateEl.textContent = '날짜를 선택하세요';
   }
   
   // 선택한 달 시간 계산
@@ -968,7 +981,312 @@ function updateStats() {
     })
     .reduce((sum, record) => sum + record.duration, 0);
   
-  selectedMonthTimeEl.textContent = formatDuration(monthDuration);
+  if (selectedMonthTimeEl) selectedMonthTimeEl.textContent = formatDuration(monthDuration);
+  
+  // 주간 통계 업데이트
+  updateWeeklyStats();
+  
+  // 월간 통계 업데이트
+  updateMonthlyStats();
+  
+  // 시간대별 통계 업데이트
+  updateHourlyStats();
+}
+
+// 주간 통계 업데이트 함수
+function updateWeeklyStats() {
+  // 현재 날짜 기준으로 일주일 전부터 오늘까지의 데이터 계산
+  const today = new Date();
+  const weeklyData = [];
+  const weeklyLabels = [];
+  let weeklyTotal = 0;
+  
+  // 일주일 전부터 오늘까지의 날짜 생성
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    date.setHours(0, 0, 0, 0);
+    
+    // 해당 날짜의 기록 필터링
+    const dayDuration = records
+      .filter(record => {
+        const recordDate = new Date(record.start_time);
+        return recordDate.toDateString() === date.toDateString();
+      })
+      .reduce((sum, record) => sum + record.duration, 0);
+    
+    // 시간으로 변환 (밀리초 -> 시간)
+    const hours = dayDuration / (1000 * 60 * 60);
+    weeklyData.push(parseFloat(hours.toFixed(2)));
+    weeklyTotal += dayDuration;
+    
+    // 요일 라벨 생성
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    weeklyLabels.push(dayNames[date.getDay()]);
+  }
+  
+  // 일일 평균 계산
+  const weeklyAverage = weeklyTotal / 7;
+  const weeklyAverageEl = document.getElementById('weeklyAverage');
+  if (weeklyAverageEl) weeklyAverageEl.textContent = `${formatDuration(weeklyAverage)}`;
+  
+  // 주간 총합 표시
+  const weeklyTotalEl = document.getElementById('weeklyTotal');
+  if (weeklyTotalEl) weeklyTotalEl.textContent = `${formatDuration(weeklyTotal)}`;
+  
+  // 차트 업데이트
+  updateWeeklyChart(weeklyLabels, weeklyData);
+}
+
+// 월간 통계 업데이트 함수
+function updateMonthlyStats() {
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  const monthlyData = [];
+  const monthlyLabels = [];
+  let monthlyTotal = 0;
+  let daysWithActivity = 0;
+  let peakDay = { day: 0, duration: 0 };
+  
+  // 이번 달의 모든 날짜에 대한 데이터 계산
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    
+    // 해당 날짜의 기록 필터링
+    const dayDuration = records
+      .filter(record => {
+        const recordDate = new Date(record.start_time);
+        return recordDate.toDateString() === date.toDateString();
+      })
+      .reduce((sum, record) => sum + record.duration, 0);
+    
+    // 시간으로 변환 (밀리초 -> 시간)
+    const hours = dayDuration / (1000 * 60 * 60);
+    monthlyData.push(parseFloat(hours.toFixed(2)));
+    monthlyTotal += dayDuration;
+    
+    // 활동이 있는 날 카운트
+    if (dayDuration > 0) {
+      daysWithActivity++;
+      
+      // 최다 활동일 체크
+      if (dayDuration > peakDay.duration) {
+        peakDay = { day: day, duration: dayDuration, date: new Date(date) };
+      }
+    }
+    
+    // 날짜 라벨 생성 (5일 간격으로 표시)
+    monthlyLabels.push(day % 5 === 0 ? day.toString() : '');
+  }
+  
+  // 월 총합 및 일일 평균 계산
+  const monthlyTotalEl = document.getElementById('monthlyTotal');
+  if (monthlyTotalEl) monthlyTotalEl.textContent = `${formatDuration(monthlyTotal)}`;
+  
+  const monthlyAverage = daysWithActivity > 0 ? monthlyTotal / daysWithActivity : 0;
+  const monthlyAverageEl = document.getElementById('monthlyAverage');
+  if (monthlyAverageEl) monthlyAverageEl.textContent = `${formatDuration(monthlyAverage)}`;
+  
+  // 최다 활동일 표시
+  const peakDayEl = document.getElementById('peakDay');
+  if (peakDayEl) {
+    if (peakDay.day > 0) {
+      const options = { month: 'long', day: 'numeric' };
+      peakDayEl.textContent = `${peakDay.date.toLocaleDateString('ko-KR', options)} (${formatDuration(peakDay.duration)})`;
+    } else {
+      peakDayEl.textContent = '없음';
+    }
+  }
+  
+  // 차트 업데이트
+  updateMonthlyChart(monthlyLabels, monthlyData);
+}
+
+// 시간대별 통계 업데이트 함수
+function updateHourlyStats() {
+  // 24시간대별 데이터 초기화
+  const hourlyData = Array(24).fill(0);
+  
+  // 모든 기록에 대해 시간대별로 집계
+  records.forEach(record => {
+    const startTime = new Date(record.start_time);
+    const endTime = new Date(record.end_time);
+    
+    // 시작 시간과 종료 시간이 다른 시간대에 걸쳐 있을 수 있으므로
+    // 각 시간대별로 분할하여 계산
+    let currentTime = new Date(startTime);
+    while (currentTime < endTime) {
+      const hour = currentTime.getHours();
+      
+      // 다음 시간대 또는 종료 시간 중 더 빠른 시간 계산
+      const nextHour = new Date(currentTime);
+      nextHour.setHours(hour + 1, 0, 0, 0);
+      
+      const segmentEnd = nextHour < endTime ? nextHour : endTime;
+      const duration = segmentEnd - currentTime;
+      
+      // 해당 시간대에 누적
+      hourlyData[hour] += duration;
+      
+      // 다음 시간대로 이동
+      currentTime = nextHour;
+    }
+  });
+  
+  // 밀리초를 시간으로 변환
+  const hourlyDataInHours = hourlyData.map(ms => parseFloat((ms / (1000 * 60 * 60)).toFixed(2)));
+  
+  // 가장 활동적인 시간대 찾기
+  let peakHour = 0;
+  for (let i = 1; i < 24; i++) {
+    if (hourlyData[i] > hourlyData[peakHour]) {
+      peakHour = i;
+    }
+  }
+  
+  // 가장 활동적인 시간대 표시
+  const peakHoursEl = document.getElementById('peakHours');
+  if (peakHoursEl) {
+    if (hourlyData[peakHour] > 0) {
+      const nextHour = (peakHour + 1) % 24;
+      peakHoursEl.textContent = `${peakHour}시 ~ ${nextHour}시`;
+    } else {
+      peakHoursEl.textContent = '없음';
+    }
+  }
+  
+  // 차트 업데이트
+  updateHourlyChart(hourlyDataInHours);
+}
+
+// 주간 차트 업데이트 함수
+function updateWeeklyChart(labels, data) {
+  const weeklyChartEl = document.getElementById('weeklyChart');
+  if (!weeklyChartEl) return;
+  
+  const ctx = weeklyChartEl.getContext('2d');
+  
+  // 이미 차트가 있으면 파괴
+  if (weeklyChartObj) {
+    weeklyChartObj.destroy();
+  }
+  
+  // 차트 생성
+  weeklyChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '일일 활동 시간 (시간)',
+        data: data,
+        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+        borderColor: 'rgba(76, 175, 80, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '시간'
+          }
+        }
+      }
+    }
+  });
+}
+
+// 월간 차트 업데이트 함수
+function updateMonthlyChart(labels, data) {
+  const monthlyChartEl = document.getElementById('monthlyChart');
+  if (!monthlyChartEl) return;
+  
+  const ctx = monthlyChartEl.getContext('2d');
+  
+  // 이미 차트가 있으면 파괴
+  if (monthlyChartObj) {
+    monthlyChartObj.destroy();
+  }
+  
+  // 차트 생성
+  monthlyChartObj = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '일일 활동 시간 (시간)',
+        data: data,
+        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+        borderColor: 'rgba(76, 175, 80, 1)',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '시간'
+          }
+        }
+      }
+    }
+  });
+}
+
+// 시간대별 차트 업데이트 함수
+function updateHourlyChart(data) {
+  const hourlyChartEl = document.getElementById('hourlyChart');
+  if (!hourlyChartEl) return;
+  
+  const ctx = hourlyChartEl.getContext('2d');
+  
+  // 시간대 라벨 생성 (0시 ~ 23시)
+  const labels = Array.from({length: 24}, (_, i) => `${i}시`);
+  
+  // 이미 차트가 있으면 파괴
+  if (hourlyChartObj) {
+    hourlyChartObj.destroy();
+  }
+  
+  // 차트 생성
+  hourlyChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '시간대별 활동 시간 (시간)',
+        data: data,
+        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+        borderColor: 'rgba(76, 175, 80, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '시간'
+          }
+        }
+      }
+    }
+  });
 }
 
 // 기록 로드
@@ -1156,6 +1474,22 @@ function initNavigation() {
   const views = document.querySelectorAll('.view');
   const timeCalendarToggle = document.getElementById('time-calendar-toggle');
   
+  // 차트 컨테이너 숨기는 함수
+  function hideChartContainers() {
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+      container.style.display = 'none';
+    });
+  }
+  
+  // 차트 컨테이너 보이는 함수
+  function showChartContainers() {
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+      container.style.display = 'block';
+    });
+  }
+  
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       // 시간/달력 토글 버튼인 경우 특별 처리
@@ -1174,6 +1508,8 @@ function initNavigation() {
           views.forEach(view => view.classList.remove('active'));
           // 시간 뷰 활성화
           document.getElementById('time-view').classList.add('active');
+          // 통계 탭이 아닌 경우 차트 컨테이너 숨기기
+          hideChartContainers();
         }
         return;
       }
@@ -1211,12 +1547,24 @@ function initNavigation() {
       // 선택된 뷰 보이기
       document.getElementById(targetView).classList.add('active');
       
-      // 달력 뷰로 전환 시 기록 새로 로드하고 달력 및 통계 업데이트
+      // 뷰 전환 시 필요한 업데이트 수행
       if (targetView === 'calendar-view') {
+        // 달력 뷰로 전환 시 기록 새로 로드하고 달력 업데이트
         loadRecords().then(() => {
           renderCalendar();
-          updateStats();
         });
+        // 통계 탭이 아닌 경우 차트 컨테이너 숨기기
+        hideChartContainers();
+      } else if (targetView === 'stats-view') {
+        // 통계 뷰로 전환 시 통계 업데이트
+        loadRecords().then(() => {
+          updateStats();
+          // 통계 탭에서는 차트 컨테이너 표시
+          showChartContainers();
+        });
+      } else {
+        // 다른 탭으로 전환 시 차트 컨테이너 숨기기
+        hideChartContainers();
       }
     });
   });
@@ -1269,10 +1617,14 @@ function handleTimeCalendarToggle(toggleBtn) {
 
     document.getElementById('calendar-view').classList.add('active');
     
-    // 달력 뷰로 전환 시 기록 새로 로드하고 달력 및 통계 업데이트
+    // 달력 뷰로 전환 시 기록 새로 로드하고 달력 업데이트
     loadRecords().then(() => {
       renderCalendar();
-      updateStats();
+      // 차트 컨테이너 숨기기
+      const chartContainers = document.querySelectorAll('.chart-container');
+      chartContainers.forEach(container => {
+        container.style.display = 'none';
+      });
     });
   } else {
     toggleBtn.dataset.mode = 'time';
@@ -1754,7 +2106,11 @@ async function initAdditionalSettings() {
 // 시간 표시 업데이트 (시간 형식 변경 시)
 function updateTimeDisplay() {
   // 기존 시간 표시들을 새로운 형식으로 업데이트
-  updateStats();
+  // 통계 탭이 활성화된 경우에만 통계 업데이트
+  const statsView = document.getElementById('stats-view');
+  if (statsView && statsView.classList.contains('active')) {
+    updateStats();
+  }
   renderDailyView();
 }
 
@@ -1837,7 +2193,13 @@ async function importData(event) {
     
     // 데이터 다시 로드
     await loadRecords();
-    updateStats();
+    
+    // 통계 탭이 활성화된 경우에만 통계 업데이트
+    const statsView = document.getElementById('stats-view');
+    if (statsView && statsView.classList.contains('active')) {
+      updateStats();
+    }
+    
     renderCalendar();
     renderDailyView();
     
@@ -1863,9 +2225,25 @@ function startRealTimeUpdate() {
     // 기록 새로 로드
     await loadRecords();
     
-    // 달력 및 통계 업데이트
+    // 달력 업데이트
     renderCalendar();
-    updateStats();
+    
+    // 통계 탭이 활성화된 경우에만 통계 업데이트
+    const statsView = document.getElementById('stats-view');
+    if (statsView && statsView.classList.contains('active')) {
+      updateStats();
+      // 통계 탭이 활성화된 경우 차트 컨테이너 표시
+      const chartContainers = document.querySelectorAll('.chart-container');
+      chartContainers.forEach(container => {
+        container.style.display = 'block';
+      });
+    } else {
+      // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
+      const chartContainers = document.querySelectorAll('.chart-container');
+      chartContainers.forEach(container => {
+        container.style.display = 'none';
+      });
+    }
     
     // 현재 보고 있는 날짜의 일간 뷰 업데이트
     renderDailyView();
@@ -1890,7 +2268,19 @@ async function init() {
   updateTotalTimer();
   renderCalendar();
   renderDailyView();
-  updateStats();
+  
+  // 통계 탭이 활성화된 경우에만 통계 업데이트 및 차트 표시
+  const statsView = document.getElementById('stats-view');
+  if (statsView && statsView.classList.contains('active')) {
+    updateStats();
+  } else {
+    // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+      container.style.display = 'none';
+    });
+  }
+  
   initNavigation();
   initActionButtons();
   await initTimerToggle();

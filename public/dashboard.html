@@ -113,26 +113,86 @@
 
       <!-- 통계 화면 -->
       <div id="stats-view" class="view">
-        <div class="header">
+        <div class="stats-header">
           <h1>통계</h1>
+          <div class="stats-summary">
+            <div class="summary-item">
+              <span class="summary-label">전체</span>
+              <span class="summary-value" id="totalTime">0시간 0분</span>
+            </div>
+          </div>
         </div>
-        <div class="stats-container">
-          <div class="stat-card">
-            <h3>선택한 날짜</h3>
-            <div class="stat-value" id="selectedDateTime">0시간 0분</div>
-            <div class="stat-date" id="selectedDate">날짜를 선택하세요</div>
+        <div class="stats-content">
+          <div class="stats-sidebar">
+            <div class="sidebar-section">
+              <h3>주요 통계</h3>
+              <ul class="stats-list">
+                <li class="stats-list-item">
+                  <span class="list-label">오늘</span>
+                  <span class="list-value" id="todayTime">0시간 0분</span>
+                </li>
+                <li class="stats-list-item">
+                  <span class="list-label">이번 주</span>
+                  <span class="list-value" id="weeklyTotal">0시간 0분</span>
+                </li>
+                <li class="stats-list-item">
+                  <span class="list-label">이번 달</span>
+                  <span class="list-value" id="selectedMonthTime">0시간 0분</span>
+                </li>
+              </ul>
+            </div>
+            <div class="sidebar-section">
+              <h3>평균</h3>
+              <ul class="stats-list">
+                <li class="stats-list-item">
+                  <span class="list-label">일일 평균</span>
+                  <span class="list-value" id="weeklyAverage">0시간 0분</span>
+                </li>
+                <li class="stats-list-item">
+                  <span class="list-label">활동일 평균</span>
+                  <span class="list-value" id="monthlyAverage">0시간 0분</span>
+                </li>
+              </ul>
+            </div>
+            <div class="sidebar-section">
+              <h3>최고 기록</h3>
+              <ul class="stats-list">
+                <li class="stats-list-item">
+                  <span class="list-label">최다 활동 시간대</span>
+                  <span class="list-value" id="peakHours">없음</span>
+                </li>
+                <li class="stats-list-item">
+                  <span class="list-label">최다 활동일</span>
+                  <span class="list-value" id="peakDay">없음</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div class="stat-card">
-            <h3>선택한 달</h3>
-            <div class="stat-value" id="selectedMonthTime">0시간 0분</div>
-          </div>
-          <div class="stat-card">
-            <h3>오늘</h3>
-            <div class="stat-value" id="todayTime">0시간 0분</div>
-          </div>
-          <div class="stat-card">
-            <h3>전체</h3>
-            <div class="stat-value" id="totalTime">0시간 0분</div>
+          <div class="stats-main">
+            <!-- 주간 통계 섹션 -->
+            <div class="stats-section">
+              <h2 class="section-title">주간 통계</h2>
+              <div class="chart-container">
+                <canvas id="weeklyChart"></canvas>
+              </div>
+            </div>
+            
+            <!-- 월간 통계 섹션 -->
+            <div class="stats-section">
+              <h2 class="section-title">월간 통계</h2>
+              <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+              </div>
+              <div class="stat-info" id="monthlyTotal">월 총합: 0시간 0분</div>
+            </div>
+            
+            <!-- 시간대별 통계 섹션 -->
+            <div class="stats-section">
+              <h2 class="section-title">시간대별 통계</h2>
+              <div class="chart-container">
+                <canvas id="hourlyChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -147,7 +207,8 @@
             <div class="group-header">
           <div class="group-icon">
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+               <circle cx="12" cy="12" r="3"></circle>
+               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
              </svg>
            </div>
           <div class="group-info">
@@ -194,8 +255,8 @@
             <div class="group-header">
           <div class="group-icon">
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <circle cx="12" cy="12" r="10"></circle>
-               <polyline points="12,6 12,12 16,14"></polyline>
+               <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+               <path d="M6 8h.01M6 12h.01M6 16h.01M10 8h8M10 12h8M10 16h8"></path>
              </svg>
            </div>
           <div class="group-info">
@@ -223,9 +284,9 @@
             <div class="group-header">
           <div class="group-icon">
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <line x1="18" y1="20" x2="18" y2="10"></line>
-               <line x1="12" y1="20" x2="12" y2="4"></line>
-               <line x1="6" y1="20" x2="6" y2="14"></line>
+               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+               <polyline points="7 10 12 15 17 10"></polyline>
+               <line x1="12" y1="15" x2="12" y2="3"></line>
              </svg>
            </div>
           <div class="group-info">
@@ -330,6 +391,8 @@
       </button>
     </div>
   </div>
+  <!-- Chart.js 라이브러리 추가 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/dashboard.js" defer></script>
 </body>
 </html>
