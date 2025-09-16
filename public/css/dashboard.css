@@ -279,7 +279,7 @@ body.dark-mode .calendar-day.other-month.sunday {
   align-items: center;
   padding: 10px 20px;
   gap: 10px;
-  background: white;
+  background: #f2f2f7;
   border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
@@ -300,10 +300,16 @@ body.dark-mode .calendar-day.other-month.sunday {
   transition: all 0.2s ease;
 }
 
+.timer-container {
+  position: relative;
+  order: 1; /* 가장 왼쪽에 배치 */
+}
+
 .time-input-button {
   background: #2196F3;
   color: white;
   box-shadow: 0 2px 10px rgba(33, 150, 243, 0.2);
+  order: 2; /* 타이머와 dailytotal 사이에 배치 */
 }
 
 .time-input-button:hover {
@@ -642,10 +648,6 @@ body.dark-mode .calendar-day.other-month.sunday {
   overflow: hidden;
 }
 
-.daily-timeline-section.full-height {
-  padding-top: 80px;
-}
-
 .daily-header {
   display: flex;
   justify-content: space-between;
@@ -665,6 +667,12 @@ body.dark-mode .calendar-day.other-month.sunday {
   font-weight: 600;
 }
 
+.daily-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .daily-total {
   font-size: 16px;
   font-weight: 600;
@@ -672,6 +680,7 @@ body.dark-mode .calendar-day.other-month.sunday {
   background: rgba(52, 199, 89, 0.1);
   padding: 6px 12px;
   border-radius: 12px;
+  order: 3; /* 가장 오른쪽에 배치 */
 }
 
 .hourly-timeline {
