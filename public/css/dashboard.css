@@ -1119,7 +1119,6 @@ body.dark-mode #stats-view .stat-info {
   display: flex;
   height: 80px;
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  z-index: 1000; /* 높은 z-index 값 추가 */
 }
 
 .nav-item {
@@ -1220,11 +1219,13 @@ body.dark-mode #stats-view .stat-info {
 
 /* 설정 페이지 스타일 */
 .settings-container {
-  padding: 20px 0 100px 0;
+  padding: 20px 0 80px 0;
   max-width: 100%;
-  margin: 0;
+  margin: 0 0 80px 0;
   background: #f8fafc;
-  min-height: 100vh;
+  min-height: calc(100vh - 80px);
+  overflow-y: auto;
+  height: calc(100vh - 80px);
 }
 
 .setting-group {
@@ -1731,7 +1732,7 @@ body.dark-mode .floating-timer .total-timer {
 }
 
 body.dark-mode .time-input-modal {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 body.dark-mode .modal-content {
