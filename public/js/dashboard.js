@@ -1371,18 +1371,23 @@ async function updateActivity() {
     return;
   }
   
-  // 선택된 날짜 가져오기 (selectedDate가 없으면 오늘 날짜 사용)
-  const baseDate = selectedDate || new Date();
-  
   // 시작 시간과 종료 시간 파싱
   const [startHours, startMinutes] = editStartTimeInput.value.split(':').map(Number);
   const [endHours, endMinutes] = editEndTimeInput.value.split(':').map(Number);
   
-  // 시작 시간과 종료 시간 설정
-  const startTime = new Date(baseDate);
+  // 현재 편집 중인 레코드 찾기
+  const currentRecord = records.find(record => record.id === currentEditingRecordId);
+  
+  if (!currentRecord) {
+    alert('레코드를 찾을 수 없습니다.');
+    return;
+  }
+  
+  // 원래 날짜 정보를 유지하면서 시간만 업데이트
+  const startTime = new Date(currentRecord.start_time);
   startTime.setHours(startHours, startMinutes, 0, 0);
   
-  const endTime = new Date(baseDate);
+  const endTime = new Date(currentRecord.start_time);
   endTime.setHours(endHours, endMinutes, 0, 0);
   
   // 종료 시간이 시작 시간보다 이전인 경우 다음 날로 설정
@@ -1401,8 +1406,7 @@ async function updateActivity() {
       body: JSON.stringify({
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        duration: duration,
-        targetDate: baseDate.toISOString() // 선택된 날짜 정보 추가
+        duration: duration
       })
     });
     
