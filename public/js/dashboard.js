@@ -1299,22 +1299,30 @@ async function loadRecords() {
       }
     });
     if (response.ok) {
-      records = await response.json();
+      const responseData = await response.json();
       
       // 디버깅: 서버에서 받아온 기록 데이터 확인
-      console.log('서버에서 받아온 기록:', records);
+      console.log('서버에서 받아온 기록:', responseData);
       
-      // paused_intervals 필드가 문자열인 경우 파싱
-      records.forEach(record => {
-        if (record.paused_intervals && typeof record.paused_intervals === 'string') {
-          try {
-            record.paused_intervals = JSON.parse(record.paused_intervals);
-          } catch (e) {
-            console.error('일시정지 구간 파싱 오류:', e);
-            record.paused_intervals = [];
+      // 새로운 응답 형식에 맞게 records 배열 추출
+      if (responseData.success && responseData.data && responseData.data.records) {
+        records = responseData.data.records;
+        
+        // paused_intervals 필드가 문자열인 경우 파싱
+        records.forEach(record => {
+          if (record.paused_intervals && typeof record.paused_intervals === 'string') {
+            try {
+              record.paused_intervals = JSON.parse(record.paused_intervals);
+            } catch (e) {
+              console.error('일시정지 구간 파싱 오류:', e);
+              record.paused_intervals = [];
+            }
           }
-        }
-      });
+        });
+      } else {
+        console.error('서버 응답 형식이 올바르지 않습니다:', responseData);
+        records = [];
+      }
     } else if (response.status === 401) {
       // 인증 오류 - 로그인 페이지로 리디렉션
       alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
