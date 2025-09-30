@@ -180,19 +180,36 @@ router.post('/logout', (req, res) => {
  */
 router.get('/check', (req, res) => {
   try {
-    if (req.session && req.session.userId) {
-      res.json(createResponse(true, '인증된 사용자입니다.', { 
+    // 세션 객체가 존재하는지 확인
+    if (!req.session) {
+      console.error('세션 객체가 존재하지 않습니다.');
+      return res.status(500).json({ 
+        success: false, 
+        authenticated: false,
+        error: '세션 오류가 발생했습니다.' 
+      });
+    }
+    
+    // 인증 상태 확인
+    if (req.session.userId) {
+      return res.json({ 
+        success: true, 
         authenticated: true, 
         username: req.session.username 
-      }));
+      });
     } else {
-      res.json(createResponse(false, '인증되지 않은 사용자입니다.', { 
+      return res.status(401).json({ 
+        success: false, 
         authenticated: false 
-      }));
+      });
     }
   } catch (error) {
-    console.error('인증 확인 오류:', error);
-    res.status(500).json(createResponse(false, '서버 오류가 발생했습니다.', null, '서버 오류가 발생했습니다.'));
+    console.error('인증 확인 중 오류 발생:', error);
+    return res.status(500).json({ 
+      success: false, 
+      authenticated: false,
+      error: '인증 확인 중 서버 오류가 발생했습니다.' 
+    });
   }
 });
 

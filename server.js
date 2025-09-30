@@ -124,6 +124,17 @@ const startServer = async () => {
   try {
     // 데이터베이스 초기화
     const database = new Database();
+    
+    // 데이터베이스 경로 확인
+    const fs = require('fs');
+    const dbDir = path.dirname(config.database.filename);
+    
+    // db 디렉토리가 없으면 생성
+    if (!fs.existsSync(dbDir) && dbDir !== '.') {
+      fs.mkdirSync(dbDir, { recursive: true });
+      console.log(`데이터베이스 디렉토리 생성: ${dbDir}`);
+    }
+    
     const db = await database.init();
     
     // 데이터베이스를 앱에 설정 (라우트에서 사용할 수 있도록)
@@ -135,6 +146,7 @@ const startServer = async () => {
     });
   } catch (err) {
     console.error('서버 시작 실패:', err);
+    console.error('오류 세부 정보:', err.stack);
     process.exit(1);
   }
 };

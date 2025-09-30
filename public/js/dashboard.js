@@ -2264,53 +2264,58 @@ function startRealTimeUpdate() {
 
 // 초기화
 async function init() {
-  // 인증 상태 확인
-  const isAuthenticated = await checkAuth();
-  if (!isAuthenticated) {
-    return;
-  }
-  
-  // 기록 로드
-  await loadRecords();
-  
-  // 실시간 업데이트 시작
-  startRealTimeUpdate();
-  
-  // UI 초기화
-  updateTotalTimer();
-  renderCalendar();
-  renderDailyView();
-  
-  // 통계 탭이 활성화된 경우에만 통계 업데이트 및 차트 표시
-  const statsView = document.getElementById('stats-view');
-  if (statsView && statsView.classList.contains('active')) {
-    updateStats();
-  } else {
-    // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
-    const chartContainers = document.querySelectorAll('.chart-container');
-    chartContainers.forEach(container => {
-      container.style.display = 'none';
-    });
-  }
-  
-  initNavigation();
-  initActionButtons();
-  await initTimerToggle();
-  await initAdditionalSettings();
-  
-  // 초기 로드 시 현재 시간으로 스크롤 (오늘 날짜일 때만)
-  if (!selectedDate || selectedDate.toDateString() === new Date().toDateString()) {
-    setTimeout(() => {
-      scrollToCurrentTime();
-    }, 500); // DOM 렌더링 완료 후 스크롤 (지연시간 증가)
-  }
-  
-  // 실시간 업데이트 시작
-  startRealTimeUpdate();
-  
-  // 로그아웃 버튼 이벤트
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
+  try {
+    // 인증 상태 확인
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) {
+      console.log('인증 실패, 초기화 중단');
+      return;
+    }
+    
+    // 기록 로드
+    await loadRecords();
+    
+    // UI 초기화
+    updateTotalTimer();
+    renderCalendar();
+    renderDailyView();
+    
+    // 통계 탭이 활성화된 경우에만 통계 업데이트 및 차트 표시
+    const statsView = document.getElementById('stats-view');
+    if (statsView && statsView.classList.contains('active')) {
+      updateStats();
+    } else {
+      // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
+      const chartContainers = document.querySelectorAll('.chart-container');
+      chartContainers.forEach(container => {
+        container.style.display = 'none';
+      });
+    }
+    
+    initNavigation();
+    initActionButtons();
+    await initTimerToggle();
+    await initAdditionalSettings();
+    
+    // 초기 로드 시 현재 시간으로 스크롤 (오늘 날짜일 때만)
+    if (!selectedDate || selectedDate.toDateString() === new Date().toDateString()) {
+      setTimeout(() => {
+        scrollToCurrentTime();
+      }, 500);
+    }
+    
+    // 실시간 업데이트 시작
+    startRealTimeUpdate();
+    
+    // 로그아웃 버튼 이벤트
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', logout);
+    }
+    
+    console.log('대시보드 초기화 완료');
+  } catch (error) {
+    console.error('대시보드 초기화 실패:', error);
+    window.location.href = '/login';
   }
 }
 
