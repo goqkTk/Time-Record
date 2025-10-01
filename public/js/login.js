@@ -1,3 +1,18 @@
+// 공통 에러 처리 함수
+// 데이터 검증 공통 함수
+function validateRequiredFields(...fields) {
+  return fields.every(field => field && field.trim() !== '');
+}
+
+function validatePasswordMatch(password, confirmPassword) {
+  return password === confirmPassword;
+}
+
+function handleError(error, message = '오류가 발생했습니다') {
+    console.error(message, error);
+    showError(message);
+}
+
 let isLoginMode = true;
 
 const authForm = document.getElementById('authForm');
@@ -78,18 +93,18 @@ authForm.addEventListener('submit', async (e) => {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     
-    if (!username || !password) {
+    if (!validateRequiredFields(username, password)) {
         showError('모든 필드를 입력해주세요');
         return;
     }
     
     if (!isLoginMode) {
         const confirmPassword = confirmPasswordInput.value;
-        if (!confirmPassword) {
+        if (!validateRequiredFields(confirmPassword)) {
             showError('모든 필드를 입력해주세요');
             return;
         }
-        if (password !== confirmPassword) {
+        if (!validatePasswordMatch(password, confirmPassword)) {
             showError('아이디 또는 비밀번호가 일치하지 않습니다');
             return;
         }
@@ -135,7 +150,7 @@ authForm.addEventListener('submit', async (e) => {
             showError(data.error || '오류가 발생했습니다.');
         }
     } catch (error) {
-        showError('서버 연결에 실패했습니다.');
+        handleError(error, '서버 연결에 실패했습니다.');
     } finally {
         setLoading(false);
     }

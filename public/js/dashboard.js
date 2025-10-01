@@ -58,6 +58,178 @@ const saveEditBtn = document.getElementById('saveEditBtn');
 // 현재 수정 중인 활동 레코드 ID
 let currentEditingRecordId = null;
 
+// DOM 요소 선택 공통 함수
+function getElement(id, required = true) {
+  const element = document.getElementById(id);
+  if (required && !element) {
+    console.error(`Required element with id '${id}' not found`);
+    return null;
+  }
+  return element;
+}
+
+// 이미 선언된 DOM 요소들을 재사용하는 함수
+function getExistingElement(elementName) {
+  const elementMap = {
+    'stats-view': () => document.getElementById('stats-view'),
+    'time-view': () => document.getElementById('time-view'),
+    'calendar-view': () => document.getElementById('calendar-view'),
+    'floatingTimer': () => floatingTimer
+  };
+  
+  const getter = elementMap[elementName];
+  return getter ? getter() : getElement(elementName);
+}
+
+// DOM 요소 텍스트 업데이트 공통 함수
+function updateElementText(element, text) {
+  if (element) {
+    element.textContent = text;
+  }
+}
+
+// DOM 요소 스타일 업데이트 공통 함수
+function updateElementStyle(element, property, value) {
+  if (element) {
+    element.style[property] = value;
+  }
+}
+
+// 타이머 업데이트 공통 함수
+function updateTimerDisplay(element, timeValue) {
+  updateElementText(element, formatTime(timeValue));
+}
+
+// 시간:분 형식 포맷팅 공통 함수
+function formatHoursMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// 시간:분:초 형식 포맷팅 공통 함수 (padStart 사용)
+function formatTimeWithPadding(hours, minutes, seconds = null) {
+  if (seconds !== null) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// 데이터 검증 공통 함수
+function validateRequiredFields(...fields) {
+  return fields.every(field => field && field.trim() !== '');
+}
+
+function validateTimeOrder(startTime, endTime) {
+  return endTime > startTime;
+}
+
+function validatePasswordMatch(password, confirmPassword) {
+  return password === confirmPassword;
+}
+
+function validateFileType(file, allowedExtensions) {
+  if (!file) return false;
+  return allowedExtensions.some(ext => file.name.endsWith(ext));
+}
+
+// 날짜 필터링 공통 함수들
+function filterRecordsByDate(records, targetDate) {
+  return records.filter(record => {
+    const recordDate = new Date(record.start_time);
+    return recordDate.toDateString() === targetDate.toDateString();
+  });
+}
+
+function filterRecordsByTimeBlock(records, startMinutes, endMinutes) {
+  return records.filter(record => {
+    const recordStart = new Date(record.start_time);
+    const recordEnd = new Date(recordStart.getTime() + record.duration);
+    const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
+    const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
+    
+    return recordStartMinutes < endMinutes && recordEndMinutes > startMinutes;
+  });
+}
+
+function validateRecords(records) {
+  return records.filter(record => {
+    return record.start_time && record.end_time && record.duration;
+  });
+}
+
+// 시간 계산 공통 함수들
+function calculateDuration(startTime, endTime) {
+  return endTime.getTime() - startTime.getTime();
+}
+
+function calculateTotalDuration(records) {
+  return records.reduce((sum, record) => sum + record.duration, 0);
+}
+
+function convertMinutesToMs(minutes) {
+  return minutes * 60 * 1000;
+}
+
+function convertMsToMinutes(ms) {
+  return Math.round(ms / (1000 * 60));
+}
+
+// 에러 처리 공통 함수들
+function handleError(error, message, showAlert = false) {
+  console.error(message, error);
+  if (showAlert) {
+    alert(message);
+  }
+}
+
+async function handleApiError(response, defaultMessage = 'API 요청 실패') {
+  if (response.status === 401) {
+    handleAuthError();
+    return;
+  }
+  
+  let errorMessage = defaultMessage;
+  try {
+    const errorData = await response.json();
+    if (errorData.message) {
+      errorMessage = errorData.message;
+    }
+  } catch (e) {
+    // JSON 파싱 실패 시 기본 메시지 사용
+  }
+  
+  throw new Error(errorMessage);
+}
+
+// 설정 관리 공통 함수들
+function getSettingValue(settingKey, defaultValue = null) {
+  // 1. 전역 설정 객체에서 확인
+  if (window.userSettings && window.userSettings[settingKey] !== undefined) {
+    return window.userSettings[settingKey];
+  }
+  // 2. localStorage에서 확인
+  const localValue = localStorage.getItem(settingKey);
+  return localValue !== null ? localValue : defaultValue;
+}
+
+async function updateSetting(settingKey, settingValue, callback = null) {
+  try {
+    // 서버에 저장
+    await saveUserSetting(settingKey, settingValue);
+    
+    // localStorage에도 저장하여 새로고침 시 설정 유지
+    localStorage.setItem(settingKey, settingValue);
+    
+    // 콜백 함수 실행 (UI 업데이트 등)
+    if (callback && typeof callback === 'function') {
+      callback();
+    }
+  } catch (error) {
+    handleError(error, '설정 업데이트 오류:');
+  }
+}
+
 // 유틸리티 함수들
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -79,11 +251,7 @@ function formatDuration(ms) {
 
 function formatDurationShort(ms) {
   const totalMinutes = Math.floor(ms / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  
-  // 항상 24시간제 형식으로 표시
-  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  return formatHoursMinutes(totalMinutes);
 }
 
 function isToday(date) {
@@ -97,12 +265,7 @@ function isSameMonth(date1, date2) {
 
 // 시간 형식 설정을 가져오는 공통 함수
 function getTimeFormatSetting() {
-  let timeFormatSetting = window.userSettings?.timeFormat;
-  if (!timeFormatSetting) {
-    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-    timeFormatSetting = localStorage.getItem('timeFormat') || '24';
-  }
-  return timeFormatSetting;
+  return getSettingValue('timeFormat', '24');
 }
 
 // 시간을 형식에 맞게 표시하는 공통 함수
@@ -300,18 +463,18 @@ function createSegmentBar(segment, minutes, record, recordStartMinutes) {
 function updateTimer() {
   const now = Date.now();
   elapsed = now - startTime;
-  timerEl.textContent = formatTime(elapsed);
+  updateTimerDisplay(timerEl, elapsed);
   updateTotalTimer();
 }
 
 function resetTimer() {
-  timerEl.textContent = '00:00:00';
+  updateElementText(timerEl, '00:00:00');
   elapsed = 0;
 }
 
 function updateTotalTimer() {
   if (totalTimerEl) {
-    totalTimerEl.textContent = formatTime(totalElapsed + elapsed);
+    updateTimerDisplay(totalTimerEl, totalElapsed + elapsed);
   }
 }
 
@@ -415,7 +578,7 @@ function initTimerControls() {
         renderCalendar();
         renderDailyView();
       } catch (error) {
-        console.error('기록 저장 실패:', error);
+        handleError(error, '기록 저장 실패:');
       }
     }
     
@@ -447,7 +610,7 @@ function renderCalendar() {
   const month = currentDate.getMonth();
   
   // 월 표시 업데이트
-  currentMonthEl.textContent = `${year}년 ${month + 1}월`;
+  updateElementText(currentMonthEl, `${year}년 ${month + 1}월`);
   
   // 달력 그리드 초기화
   calendarGrid.innerHTML = '';
@@ -526,20 +689,15 @@ function renderCalendar() {
     dayEl.appendChild(dayNumber);
     
     // 해당 날짜의 총 시간 계산
-    const dayRecords = records.filter(record => {
-      const recordDate = new Date(record.start_time);
-      return recordDate.toDateString() === currentDay.toDateString();
-    });
+    const dayRecords = filterRecordsByDate(records, currentDay);
     
     if (dayRecords.length > 0) {
-      const totalDuration = dayRecords.reduce((sum, record) => sum + record.duration, 0);
+      const totalDuration = calculateTotalDuration(dayRecords);
       const timeDisplay = document.createElement('div');
       timeDisplay.className = 'day-time';
       // daily total은 시간 형식 설정과 관계없이 항상 시간:분 형식으로 표시
       const totalMinutes = Math.floor(totalDuration / (1000 * 60));
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-      timeDisplay.textContent = `${hours}:${minutes.toString().padStart(2, '0')}`;
+      timeDisplay.textContent = formatHoursMinutes(totalMinutes);
       dayEl.appendChild(timeDisplay);
       dayEl.classList.add('has-record');
     }
@@ -617,25 +775,20 @@ nextMonthBtn.onclick = () => {
 function renderDailyView() {
   // 선택된 날짜가 있으면 해당 날짜를, 없으면 오늘 날짜를 사용
   const displayDate = selectedDate || new Date();
-  dailyDateEl.textContent = displayDate.toLocaleDateString('ko-KR', { 
+  updateElementText(dailyDateEl, displayDate.toLocaleDateString('ko-KR', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric',
     weekday: 'long'
-  });
+  }));
   
   // 선택된 날짜의 총 시간 계산
-  const dayRecords = records.filter(record => {
-    const recordDate = new Date(record.start_time);
-    return recordDate.toDateString() === displayDate.toDateString();
-  });
+  const dayRecords = filterRecordsByDate(records, displayDate);
   
-  const dayTotal = dayRecords.reduce((sum, record) => sum + record.duration, 0);
+  const dayTotal = calculateTotalDuration(dayRecords);
   // daily total은 시간 형식 설정과 관계없이 항상 시간:분 형식으로 표시
   const totalMinutes = Math.floor(dayTotal / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  dailyTotalEl.textContent = `${hours}:${minutes.toString().padStart(2, '0')}`;
+  updateElementText(dailyTotalEl, formatHoursMinutes(totalMinutes));
   
   // 분 단위 타임라인 생성 (24시간 * 60분 = 1440분)
   hourlyTimelineEl.innerHTML = '';
@@ -722,14 +875,7 @@ function renderDailyView() {
     }
     
     // 현재 시간 블록에 해당하는 활동만 필터링
-    const blockRecords = allRecords.filter(record => {
-      const recordStart = new Date(record.start_time);
-      const recordEnd = new Date(recordStart.getTime() + record.duration);
-      const recordStartMinutes = recordStart.getHours() * 60 + recordStart.getMinutes();
-      const recordEndMinutes = recordEnd.getHours() * 60 + recordEnd.getMinutes();
-      
-      return recordStartMinutes < minutes + 60 && recordEndMinutes > minutes;
-    });
+    const blockRecords = filterRecordsByTimeBlock(allRecords, minutes, minutes + 60);
     
     if (blockRecords.length > 0) {
       blockRecords.forEach(record => {
@@ -918,7 +1064,7 @@ function renderDailyView() {
               activityArea.removeChild(activityBar);
             }
           } catch (error) {
-            console.error('활동 바 제거 중 오류:', error);
+            handleError(error, '활동 바 제거 중 오류:');
           }
           
           segments.forEach(segment => {
@@ -957,47 +1103,44 @@ function updateStats() {
   
   // DOM 요소 존재 여부 확인 후 업데이트
   // 총 시간 계산
-  const totalDuration = records.reduce((sum, record) => sum + record.duration, 0);
-  if (totalTimeEl) totalTimeEl.textContent = formatDuration(totalDuration);
+  const totalDuration = calculateTotalDuration(records);
+  updateElementText(totalTimeEl, formatDuration(totalDuration));
   
   // 오늘 시간 계산
   const today = new Date();
-  const todayDuration = records
-    .filter(record => {
-      const recordDate = new Date(record.start_time);
-      return recordDate.toDateString() === today.toDateString();
-    })
-    .reduce((sum, record) => sum + record.duration, 0);
+  const todayRecords = records.filter(record => {
+    const recordDate = new Date(record.start_time);
+    return recordDate.toDateString() === today.toDateString();
+  });
+  const todayDuration = calculateTotalDuration(todayRecords);
   
-  if (todayTimeEl) todayTimeEl.textContent = formatDuration(todayDuration);
+  updateElementText(todayTimeEl, formatDuration(todayDuration));
   
   // 선택한 날짜 시간 계산
   if (selectedDate) {
-    const selectedDuration = records
-      .filter(record => {
-        const recordDate = new Date(record.start_time);
-        return recordDate.toDateString() === selectedDate.toDateString();
-      })
-      .reduce((sum, record) => sum + record.duration, 0);
+    const selectedRecords = records.filter(record => {
+      const recordDate = new Date(record.start_time);
+      return recordDate.toDateString() === selectedDate.toDateString();
+    });
+    const selectedDuration = calculateTotalDuration(selectedRecords);
     
-    if (selectedDateTimeEl) selectedDateTimeEl.textContent = formatDuration(selectedDuration);
-    if (selectedDateEl) selectedDateEl.textContent = selectedDate.toLocaleDateString('ko-KR');
+    updateElementText(selectedDateTimeEl, formatDuration(selectedDuration));
+    updateElementText(selectedDateEl, selectedDate.toLocaleDateString('ko-KR'));
   } else {
-    if (selectedDateTimeEl) selectedDateTimeEl.textContent = '0시간 0분';
-    if (selectedDateEl) selectedDateEl.textContent = '날짜를 선택하세요';
+    updateElementText(selectedDateTimeEl, '0시간 0분');
+    updateElementText(selectedDateEl, '날짜를 선택하세요');
   }
   
   // 선택한 달 시간 계산
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
-  const monthDuration = records
-    .filter(record => {
-      const recordDate = new Date(record.start_time);
-      return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
-    })
-    .reduce((sum, record) => sum + record.duration, 0);
+  const monthRecords = records.filter(record => {
+    const recordDate = new Date(record.start_time);
+    return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+  });
+  const monthDuration = calculateTotalDuration(monthRecords);
   
-  if (selectedMonthTimeEl) selectedMonthTimeEl.textContent = formatDuration(monthDuration);
+  updateElementText(selectedMonthTimeEl, formatDuration(monthDuration));
   
   // 주간 통계 업데이트
   updateWeeklyStats();
@@ -1024,12 +1167,11 @@ function updateWeeklyStats() {
     date.setHours(0, 0, 0, 0);
     
     // 해당 날짜의 기록 필터링
-    const dayDuration = records
-      .filter(record => {
-        const recordDate = new Date(record.start_time);
-        return recordDate.toDateString() === date.toDateString();
-      })
-      .reduce((sum, record) => sum + record.duration, 0);
+    const dayRecords = records.filter(record => {
+      const recordDate = new Date(record.start_time);
+      return recordDate.toDateString() === date.toDateString();
+    });
+    const dayDuration = calculateTotalDuration(dayRecords);
     
     // 시간으로 변환 (밀리초 -> 시간)
     const hours = dayDuration / (1000 * 60 * 60);
@@ -1044,11 +1186,11 @@ function updateWeeklyStats() {
   // 일일 평균 계산
   const weeklyAverage = weeklyTotal / 7;
   const weeklyAverageEl = document.getElementById('weeklyAverage');
-  if (weeklyAverageEl) weeklyAverageEl.textContent = `${formatDuration(weeklyAverage)}`;
+  updateElementText(weeklyAverageEl, `${formatDuration(weeklyAverage)}`);
   
   // 주간 총합 표시
   const weeklyTotalEl = document.getElementById('weeklyTotal');
-  if (weeklyTotalEl) weeklyTotalEl.textContent = `${formatDuration(weeklyTotal)}`;
+  updateElementText(weeklyTotalEl, `${formatDuration(weeklyTotal)}`);
   
   // 차트 업데이트
   updateWeeklyChart(weeklyLabels, weeklyData);
@@ -1071,12 +1213,11 @@ function updateMonthlyStats() {
     const date = new Date(currentYear, currentMonth, day);
     
     // 해당 날짜의 기록 필터링
-    const dayDuration = records
-      .filter(record => {
-        const recordDate = new Date(record.start_time);
-        return recordDate.toDateString() === date.toDateString();
-      })
-      .reduce((sum, record) => sum + record.duration, 0);
+    const dayRecords = records.filter(record => {
+      const recordDate = new Date(record.start_time);
+      return recordDate.toDateString() === date.toDateString();
+    });
+    const dayDuration = calculateTotalDuration(dayRecords);
     
     // 시간으로 변환 (밀리초 -> 시간)
     const hours = dayDuration / (1000 * 60 * 60);
@@ -1099,11 +1240,11 @@ function updateMonthlyStats() {
   
   // 월 총합 및 일일 평균 계산
   const monthlyTotalEl = document.getElementById('monthlyTotal');
-  if (monthlyTotalEl) monthlyTotalEl.textContent = `${formatDuration(monthlyTotal)}`;
+  updateElementText(monthlyTotalEl, `${formatDuration(monthlyTotal)}`);
   
   const monthlyAverage = daysWithActivity > 0 ? monthlyTotal / daysWithActivity : 0;
   const monthlyAverageEl = document.getElementById('monthlyAverage');
-  if (monthlyAverageEl) monthlyAverageEl.textContent = `${formatDuration(monthlyAverage)}`;
+  updateElementText(monthlyAverageEl, `${formatDuration(monthlyAverage)}`);
   
   // 최다 활동일 표시
   const peakDayEl = document.getElementById('peakDay');
@@ -1294,7 +1435,7 @@ async function loadRecords() {
       records = [];
     }
   } catch (error) {
-    console.error('기록 로드 오류:', error);
+    handleError(error, '기록 로드 오류:');
     records = [];
   }
 }
@@ -1366,7 +1507,7 @@ async function updateActivity() {
   }
   
   // 활동 시간 계산 (밀리초)
-  const duration = endTime.getTime() - startTime.getTime();
+  const duration = calculateDuration(startTime, endTime);
   
   try {
     // 서버에 업데이트 요청
@@ -1397,8 +1538,7 @@ async function updateActivity() {
     // 모달 닫기
     closeActivityEditModal();
   } catch (error) {
-    console.error('활동 시간 수정 실패:', error);
-    alert('활동 시간 수정에 실패했습니다.');
+    handleError(error, '활동 시간 수정 실패:', true);
   }
 }
 
@@ -1435,8 +1575,7 @@ async function deleteActivity() {
     // 모달 닫기
     closeActivityEditModal();
   } catch (error) {
-    console.error('활동 삭제 실패:', error);
-    alert('활동 삭제에 실패했습니다.');
+    handleError(error, '활동 삭제 실패:', true);
   }
 }
 
@@ -1477,7 +1616,7 @@ function initNavigation() {
           // 모든 뷰 숨기기
           views.forEach(view => view.classList.remove('active'));
           // 시간 뷰 활성화
-          document.getElementById('time-view').classList.add('active');
+          getExistingElement('time-view').classList.add('active');
           // 통계 탭이 아닌 경우 차트 컨테이너 숨기기
           hideChartContainers();
         }
@@ -1515,7 +1654,7 @@ function initNavigation() {
       // 모든 뷰 숨기기
       views.forEach(view => view.classList.remove('active'));
       // 선택된 뷰 보이기
-      document.getElementById(targetView).classList.add('active');
+      getExistingElement(targetView).classList.add('active');
       
       // 뷰 전환 시 필요한 업데이트 수행
       if (targetView === 'calendar-view') {
@@ -1585,7 +1724,7 @@ function handleTimeCalendarToggle(toggleBtn) {
       sep.style.color = '#6b7280';
     }
 
-    document.getElementById('calendar-view').classList.add('active');
+    getExistingElement('calendar-view').classList.add('active');
     
     // 달력 뷰로 전환 시 기록 새로 로드하고 달력 업데이트
     loadRecords().then(() => {
@@ -1607,7 +1746,7 @@ function handleTimeCalendarToggle(toggleBtn) {
       sep.style.color = '#6b7280';
     }
 
-    document.getElementById('time-view').classList.add('active');
+    getExistingElement('time-view').classList.add('active');
   }
 }
 
@@ -1705,7 +1844,7 @@ async function checkAuth() {
     
     return true;
   } catch (error) {
-    console.error('인증 확인 실패:', error);
+    handleError(error, '인증 확인 실패:');
     window.location.href = '/login';
     return false;
   }
@@ -1722,7 +1861,7 @@ async function logout() {
       window.location.href = '/login';
     }
   } catch (error) {
-    console.error('로그아웃 실패:', error);
+    handleError(error, '로그아웃 실패:');
   }
 }
 
@@ -1792,7 +1931,7 @@ function initActionButtons() {
   });
   
   // 타이머 토글 설정에 따라 타이머 표시 여부 결정
-  const showTimerSetting = (window.userSettings && window.userSettings.showTimer) || localStorage.getItem('showTimer');
+  const showTimerSetting = getSettingValue('showTimer', 'false');
   if (showTimerSetting === 'true') {
     timerControls.style.display = 'flex';
     initTimerControls();
@@ -1805,12 +1944,12 @@ function initActionButtons() {
     const startTime = startTimeInput.value;
     const endTime = endTimeInput.value;
     
-    if (!startTime || !endTime) {
+    if (!validateRequiredFields(startTime, endTime)) {
       alert('시작 시간과 종료 시간을 모두 입력해주세요.');
       return;
     }
     
-    if (startTime >= endTime) {
+    if (!validateTimeOrder(startTime, endTime)) {
       alert('종료 시간은 시작 시간보다 늦어야 합니다.');
       return;
     }
@@ -1832,7 +1971,7 @@ function initActionButtons() {
         endDateTime = new Date(`${nextDateStr}T${endTime}:00`);
       }
       
-      const duration = endDateTime.getTime() - startDateTime.getTime();
+      const duration = calculateDuration(startDateTime, endDateTime);
       
       const response = await fetch('/api/records', {
         method: 'POST',
@@ -1860,8 +1999,7 @@ function initActionButtons() {
         throw new Error('저장 실패');
       }
     } catch (error) {
-      console.error('시간 저장 중 오류:', error);
-      alert('시간 저장 중 오류가 발생했습니다.');
+      handleError(error, '시간 저장 중 오류:', true);
     }
   });
 }
@@ -1881,7 +2019,7 @@ async function loadUserSettings() {
       return {};
     }
   } catch (error) {
-    console.error('설정 로드 오류:', error);
+    handleError(error, '설정 로드 오류:');
     window.userSettings = {};
     return {};
   }
@@ -1924,7 +2062,7 @@ async function saveUserSetting(settingKey, settingValue) {
       console.error('설정 저장 실패:', response.status);
     }
   } catch (error) {
-    console.error('설정 저장 오류:', error);
+    handleError(error, '설정 저장 오류:');
   }
 }
 
@@ -1960,41 +2098,38 @@ async function initAdditionalSettings() {
   const settings = await loadUserSettings();
   
   // 시간 형식 설정
-  // 서버 설정, localStorage, 기본값 순으로 확인
-  const timeFormat = settings.timeFormat || localStorage.getItem('timeFormat') || '12';
+  const timeFormat = getSettingValue('timeFormat', '12');
   timeFormatSelect.value = timeFormat;
   timeFormatSelect.addEventListener('change', async () => {
-    await saveUserSetting('timeFormat', timeFormatSelect.value);
-    // localStorage에도 저장하여 새로고침 시 설정 유지
-    localStorage.setItem('timeFormat', timeFormatSelect.value);
-    // 시간 표시 업데이트
-    updateTimeDisplay();
+    await updateSetting('timeFormat', timeFormatSelect.value, () => {
+      // 시간 표시 업데이트
+      updateTimeDisplay();
+    });
   });
   
   // 주간 시작일 설정
-  const weekStart = settings.weekStart || '0';
+  const weekStart = getSettingValue('weekStart', '0');
   weekStartSelect.value = weekStart;
   weekStartSelect.addEventListener('change', async () => {
-    await saveUserSetting('weekStart', weekStartSelect.value);
-    // 캘린더 다시 렌더링
-    renderCalendar();
+    await updateSetting('weekStart', weekStartSelect.value, () => {
+      // 캘린더 다시 렌더링
+      renderCalendar();
+    });
   });
   
   // 타이머 표시 설정
-  const showTimer = settings.showTimer === 'true' || localStorage.getItem('showTimer') === 'true';
+  const showTimer = getSettingValue('showTimer', 'false') === 'true';
   timerToggle.checked = showTimer;
   timerToggle.addEventListener('change', async () => {
     const isVisible = timerToggle.checked;
-    const timerControls = document.getElementById('floatingTimer');
+    const timerControls = getExistingElement('floatingTimer');
     timerControls.style.display = isVisible ? 'flex' : 'none';
-    await saveUserSetting('showTimer', isVisible.toString());
-    // localStorage에도 저장하여 새로고침 시 설정 유지
-    localStorage.setItem('showTimer', isVisible.toString());
-    
-    // 타이머가 표시되면 타이머 컨트롤 초기화
-    if (isVisible) {
-      initTimerControls();
-    }
+    await updateSetting('showTimer', isVisible.toString(), () => {
+      // 타이머가 표시되면 타이머 컨트롤 초기화
+      if (isVisible) {
+        initTimerControls();
+      }
+    });
   });
   
   // 다크 모드 설정
@@ -2025,7 +2160,7 @@ async function initAdditionalSettings() {
 function updateTimeDisplay() {
   // 기존 시간 표시들을 새로운 형식으로 업데이트
   // 통계 탭이 활성화된 경우에만 통계 업데이트
-  const statsView = document.getElementById('stats-view');
+  const statsView = getExistingElement('stats-view');
   if (statsView && statsView.classList.contains('active')) {
     updateStats();
   }
@@ -2048,20 +2183,19 @@ async function exportData() {
     
     alert('데이터가 성공적으로 내보내졌습니다.');
   } catch (error) {
-    console.error('데이터 내보내기 오류:', error);
-    alert('데이터 내보내기에 실패했습니다.');
+    handleError(error, '데이터 내보내기 오류:', true);
   }
 }
 
 // 데이터 불러오기
 async function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  if (!file.name.endsWith('.json')) {
-    alert('JSON 파일만 업로드할 수 있습니다.');
-    return;
-  }
+    const file = event.target.files[0];
+    if (!validateFileType(file, ['.json'])) return;
+    
+    if (!file.name.endsWith('.json')) {
+      alert('JSON 파일만 업로드할 수 있습니다.');
+      return;
+    }
   
   try {
     const text = await file.text();
@@ -2072,9 +2206,7 @@ async function importData(event) {
     }
     
     // 데이터 유효성 검사
-    const validRecords = importedRecords.filter(record => {
-      return record.start_time && record.end_time && record.duration;
-    });
+    const validRecords = validateRecords(importedRecords);
     
     if (validRecords.length === 0) {
       alert('유효한 기록이 없습니다.');
@@ -2127,8 +2259,7 @@ async function importData(event) {
     event.target.value = '';
     
   } catch (error) {
-    console.error('데이터 불러오기 오류:', error);
-    alert('데이터 불러오기에 실패했습니다. 파일 형식을 확인해주세요.');
+    handleError(error, '데이터 불러오기 오류:', true);
     event.target.value = '';
   }
 }
@@ -2227,7 +2358,7 @@ async function init() {
     
     console.log('대시보드 초기화 완료');
   } catch (error) {
-    console.error('대시보드 초기화 실패:', error);
+    handleError(error, '대시보드 초기화 실패:');
     window.location.href = '/login';
   }
 }
