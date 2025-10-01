@@ -41,6 +41,9 @@ const exportDataBtn = document.getElementById('exportDataBtn');
 const importDataBtn = document.getElementById('importDataBtn');
 const importDataInput = document.getElementById('importDataInput');
 
+// 차트 컨테이너 전역 참조
+const chartContainers = document.querySelectorAll('.chart-container');
+
 // 활동바 수정/삭제 모달 요소들
 const activityEditModal = document.getElementById('activityEditModal');
 const activityModalClose = document.getElementById('activityModalClose');
@@ -89,8 +92,32 @@ function isToday(date) {
 }
 
 function isSameMonth(date1, date2) {
-  return date1.getFullYear() === date2.getFullYear() && 
-         date1.getMonth() === date2.getMonth();
+  return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
+}
+
+// 시간 형식 설정을 가져오는 공통 함수
+function getTimeFormatSetting() {
+  let timeFormatSetting = window.userSettings?.timeFormat;
+  if (!timeFormatSetting) {
+    // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
+    timeFormatSetting = localStorage.getItem('timeFormat') || '24';
+  }
+  return timeFormatSetting;
+}
+
+// 시간을 형식에 맞게 표시하는 공통 함수
+function formatTimeDisplay(hour, minute, timeFormatSetting = null) {
+  if (!timeFormatSetting) {
+    timeFormatSetting = getTimeFormatSetting();
+  }
+  
+  if (timeFormatSetting === '12') {
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const ampm = hour < 12 ? 'AM' : 'PM';
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+  } else {
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  }
 }
 
 // 타이머 기능
@@ -474,22 +501,8 @@ function renderDailyView() {
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       
-      // 시간 형식 설정 적용
-      let timeFormatSetting = window.userSettings?.timeFormat;
-      if (!timeFormatSetting) {
-        // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-        timeFormatSetting = localStorage.getItem('timeFormat') || '24';
-      }
-      
-      let displayHour;
-      if (timeFormatSetting === '12') {
-        displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-        const ampm = currentHour < 12 ? 'AM' : 'PM';
-        currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
-      } else {
-        displayHour = currentHour;
-        currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-      }
+      // 공통 함수를 사용하여 시간 형식 적용
+      currentTimeText.textContent = formatTimeDisplay(currentHour, currentMinute);
       currentTimeLine.appendChild(currentTimeText);
       
       timeBlock.appendChild(currentTimeLine);
@@ -498,23 +511,16 @@ function renderDailyView() {
     const timeLabel = document.createElement('div');
     timeLabel.className = 'time-label';
     
-    // 시간 형식 설정 적용
-    let timeFormatSetting = window.userSettings?.timeFormat;
-    if (!timeFormatSetting) {
-      // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-      timeFormatSetting = localStorage.getItem('timeFormat') || '12';
-    }
-    
     // 시간 형식에 따라 시간 표시
     if (minute === 0) {
-      let displayHour;
+      const timeFormatSetting = getTimeFormatSetting();
+      
       if (timeFormatSetting === '12') {
-        displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
         const ampm = hour < 12 ? 'AM' : 'PM';
         timeLabel.textContent = `${displayHour} ${ampm}`;
       } else {
-        displayHour = hour;
-        timeLabel.textContent = `${displayHour.toString().padStart(2, '0')}:00`;
+        timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
       }
     } else {
       timeLabel.textContent = '';
@@ -1488,7 +1494,6 @@ function initNavigation() {
   
   // 차트 컨테이너 숨기는 함수
   function hideChartContainers() {
-    const chartContainers = document.querySelectorAll('.chart-container');
     chartContainers.forEach(container => {
       container.style.display = 'none';
     });
@@ -1496,7 +1501,6 @@ function initNavigation() {
   
   // 차트 컨테이너 보이는 함수
   function showChartContainers() {
-    const chartContainers = document.querySelectorAll('.chart-container');
     chartContainers.forEach(container => {
       container.style.display = 'block';
     });
@@ -1633,7 +1637,6 @@ function handleTimeCalendarToggle(toggleBtn) {
     loadRecords().then(() => {
       renderCalendar();
       // 차트 컨테이너 숨기기
-      const chartContainers = document.querySelectorAll('.chart-container');
       chartContainers.forEach(container => {
         container.style.display = 'none';
       });
@@ -1720,23 +1723,8 @@ function updateCurrentTimeLine() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // 시간 형식 설정 적용
-    let timeFormatSetting = window.userSettings?.timeFormat;
-    if (!timeFormatSetting) {
-      // 기본값은 사용자가 선택한 값을 유지하기 위해 localStorage에서 확인
-      timeFormatSetting = localStorage.getItem('timeFormat') || '24';
-    }
-    
-    if (timeFormatSetting === '12') {
-      // 12시간제 형식
-      const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-      const ampm = currentHour < 12 ? 'AM' : 'PM';
-      currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
-    } else {
-      // 24시간제 형식
-      const displayHour = currentHour;
-      currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-    }
+    // 공통 함수를 사용하여 시간 형식 적용
+    currentTimeText.textContent = formatTimeDisplay(currentHour, currentMinute);
     
     currentTimeLine.appendChild(currentTimeText);
     
@@ -1745,40 +1733,7 @@ function updateCurrentTimeLine() {
 }
 
 // 실시간 현재 시간 업데이트
-function startRealTimeUpdate() {
-  // 매분마다 현재 시간 표시선만 업데이트
-  setInterval(() => {
-    updateCurrentTimeLine();
-  }, 60000); // 60초마다 업데이트
-  
-  // 매초마다 현재 시간 텍스트만 업데이트
-  setInterval(() => {
-    const currentTimeText = document.querySelector('.current-time-text');
-    
-    if (currentTimeText) {
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      
-      // 시간 형식 설정 적용
-      let timeFormatSetting = '12'; // 기본값을 12시간제로 변경
-      if (window.userSettings && window.userSettings.timeFormat) {
-        timeFormatSetting = window.userSettings.timeFormat;
-      }
-      
-      if (timeFormatSetting === '12') {
-        // 12시간제 형식
-        const displayHour = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour;
-        const ampm = currentHour < 12 ? 'AM' : 'PM';
-        currentTimeText.textContent = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${ampm}`;
-      } else {
-        // 24시간제 형식
-        const displayHour = currentHour;
-        currentTimeText.textContent = `${displayHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-      }
-    }
-  }, 1000); // 1초마다 업데이트
-}
+
 
 // 인증 상태 확인 함수
 async function checkAuth() {
@@ -2245,13 +2200,11 @@ function startRealTimeUpdate() {
     if (statsView && statsView.classList.contains('active')) {
       updateStats();
       // 통계 탭이 활성화된 경우 차트 컨테이너 표시
-      const chartContainers = document.querySelectorAll('.chart-container');
       chartContainers.forEach(container => {
         container.style.display = 'block';
       });
     } else {
       // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
-      const chartContainers = document.querySelectorAll('.chart-container');
       chartContainers.forEach(container => {
         container.style.display = 'none';
       });
@@ -2260,6 +2213,20 @@ function startRealTimeUpdate() {
     // 현재 보고 있는 날짜의 일간 뷰 업데이트
     renderDailyView();
   }, 60000); // 1분마다 업데이트
+  
+  // 매초마다 현재 시간 텍스트 업데이트
+  setInterval(() => {
+    const currentTimeText = document.querySelector('.current-time-text');
+    
+    if (currentTimeText) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      // 공통 함수를 사용하여 시간 형식 적용
+      currentTimeText.textContent = formatTimeDisplay(currentHour, currentMinute);
+    }
+  }, 1000); // 1초마다 업데이트
 }
 
 // 초기화
@@ -2286,7 +2253,6 @@ async function init() {
       updateStats();
     } else {
       // 통계 탭이 활성화되지 않은 경우 차트 컨테이너 숨기기
-      const chartContainers = document.querySelectorAll('.chart-container');
       chartContainers.forEach(container => {
         container.style.display = 'none';
       });
